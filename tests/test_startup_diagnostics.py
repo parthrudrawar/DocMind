@@ -2,13 +2,17 @@
 import ast
 import copy
 import logging
+import os
 from pathlib import Path
+import subprocess
+import sys
 from types import SimpleNamespace
 
 import httpx
 import pytest
 
-from authenticated_cloud.auth import AuthBroker, CloudError, Supabase, startup_diagnostic
+from authenticated_cloud.auth import AuthBroker, CloudError, Supabase
+from authenticated_cloud.diagnostics import startup_diagnostic
 from authenticated_cloud.providers import Config, RemoteStore
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -195,6 +199,37 @@ def test_invalid_json_never_logs_response_body(caplog):
 def test_emitter_rejects_arbitrary_labels_and_non_numeric_status(caplog):
     startup_diagnostic(SENSITIVE, SENSITIVE, field=SENSITIVE, http_status=SENSITIVE)
     diagnostic(caplog, "startup", "unexpected_exception")
+
+
+def test_auth_keeps_diagnostic_export_compatible():
+    from authenticated_cloud.auth import startup_diagnostic as exported
+    assert exported is startup_diagnostic
+
+
+@pytest.mark.parametrize("cached_auth", [False, True])
+def test_standalone_startup_imports_with_or_without_older_cached_auth(cached_auth):
+    # A fresh child process prevents this test from depending on pytest's import order.
+    code = """
+import authenticated_cloud.auth as auth
+if CACHED_AUTH:
+    del auth.startup_diagnostic
+    del auth.configuration_error
+from authenticated_cloud import providers, streamlit_app
+from authenticated_cloud.diagnostics import startup_diagnostic
+assert streamlit_app.startup_diagnostic is startup_diagnostic
+try:
+    providers.Config.load({})
+except auth.CloudError as error:
+    assert error.code == 'configuration'
+else:
+    raise AssertionError('Missing configuration must fail closed')
+""".replace("CACHED_AUTH", repr(cached_auth))
+    result = subprocess.run([sys.executable, "-B", "-c", code], cwd=ROOT,
+                            env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"},
+                            capture_output=True, text=True, timeout=60)
+    assert result.returncode == 0, "Standalone startup import failed"
+    assert "documind_startup stage=secrets reason=missing_variable" in result.stderr
+    assert SENSITIVE not in result.stdout + result.stderr
 
 
 def test_valid_startup_does_not_log_any_configuration(caplog, monkeypatch):

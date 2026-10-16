@@ -9,7 +9,8 @@ from uuid import UUID
 
 import httpx
 
-from authenticated_cloud.auth import CloudError, configuration_error, startup_diagnostic
+from authenticated_cloud.auth import CloudError
+from authenticated_cloud.diagnostics import configuration_error, startup_diagnostic
 
 MAX_BYTES = 2 * 1024 * 1024
 

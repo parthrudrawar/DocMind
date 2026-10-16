@@ -9,7 +9,8 @@ if str(ROOT) not in sys.path:
 import streamlit as st  # noqa: E402
 import streamlit.components.v1 as components  # noqa: E402
 
-from authenticated_cloud.auth import AuthBroker, CloudError, Supabase, startup_diagnostic  # noqa: E402
+from authenticated_cloud.auth import AuthBroker, CloudError, Supabase  # noqa: E402
+from authenticated_cloud.diagnostics import startup_diagnostic  # noqa: E402
 from authenticated_cloud.providers import Config, RemoteStore  # noqa: E402
 from authenticated_cloud.service import CloudService  # noqa: E402
 from frontend.citations import render_answer_html  # noqa: E402
