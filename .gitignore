@@ -1,43 +1,109 @@
-# Secrets
+# Secrets: actual values belong only in Community Cloud's Secrets UI.
 .env
+.env.*
+**/.env
+**/.env.*
+**/secrets.toml
+**/secrets.*
+!**/secrets.toml.example
+**/credentials*.json
+**/service-account*.json
+*.pem
+*.key
+*.p12
+*.pfx
 
-# Runtime data
-data/uploads/
-data/indexes/
-data/db/
+# Private documents, databases and persistent/application state.
+*.[pP][dD][fF]
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+*.wal
+*.shm
+*-journal
+data/
+uploads/
+storage/
+backups/
+.staging/
+.production/
+.private-demo/
+.staging-tools/
 
-# Logs
-logs/
-logs_fastapi.txt
+# Generated indexes, embeddings and model weights.
+indexes/
+indices/
+vectors/
+embeddings/
+models/
+model_cache/
+fastembed_cache/
+*.faiss
+*.index
+*.bm25
+*.onnx
+*.onnx_data
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.tflite
+*.pkl
+*.pickle
+*.joblib
+*.npy
+*.npz
 
-# Python
+# Python environments, package/build caches and generated outputs.
 __pycache__/
 *.py[cod]
-*.pyo
-*.pyd
-.Python
-*.egg-info/
-dist/
-build/
 .venv/
 venv/
 env/
+ENV/
+.cache/
+.pip-cache/
+.audit-*/
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+.pytest_tmp*/
+.pytest_runtime*/
+pytest-of-*/
+pip-ephem-wheel-cache-*/
+pip-install-*/
+pip-req-tracker-*/
+build/
+dist/
+*.egg-info/
+*.log
+*.tmp
+*.temp
+tmp*/
+*.zip
+*.tar
+*.gz
 
-# Test artifacts
-test_upload.pdf
+# Tests and browser/test artifacts are not part of this deployment package.
+tests/
+test-results/
+playwright-report/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.har
+*.trace
 
-# OS
+# Local editor/OS/deployment artifacts.
 .DS_Store
 Thumbs.db
-
-# IDE
 .vscode/
 .idea/
-
-# Node (from npx getdesign earlier)
 node_modules/
-package-lock.json
-
-# Generated explanation PDF (kept locally, not pushed)
-*.pdf
-build_explanation_pdf.py
+Dockerfile*
+docker-compose*.yml
+docker-compose*.yaml

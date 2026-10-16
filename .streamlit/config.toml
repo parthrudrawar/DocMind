@@ -1,0 +1,18 @@
+# In the SEPARATE deployment repository, copy this to .streamlit/config.toml.
+# Kept here so existing local/Docker Streamlit configuration is not changed.
+[server]
+maxUploadSize = 2
+maxMessageSize = 10
+enableCORS = true
+enableXsrfProtection = true
+enableStaticServing = false
+
+[client]
+showErrorDetails = false
+
+[theme]
+base = "dark"
+primaryColor = "#818cf8"
+backgroundColor = "#0e1117"
+secondaryBackgroundColor = "#171d2b"
+textColor = "#e2e8f0"

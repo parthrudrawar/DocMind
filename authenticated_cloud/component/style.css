@@ -1,0 +1,5 @@
+body { margin:0; font:16px system-ui,sans-serif; color:#e2e8f0; background:transparent; }
+a { display:inline-block; padding:12px 18px; border:1px solid #818cf8; border-radius:8px;
+    color:#e2e8f0; text-decoration:none; background:#20233a; }
+a:focus-visible { outline:3px solid #a5b4fc; outline-offset:3px; }
+[hidden] { display:none !important; }
