@@ -164,11 +164,15 @@ class RemoteStore:
                              headers={"Api-Key": self.config.pinecone_key, "X-Pinecone-API-Version": "2025-10"})
 
     def validate_index(self):
+        if self.config.pinecone_index != "documind-cloud":
+            configuration_error("pinecone_index", "index_name_mismatch", field="PINECONE_INDEX")
         result = self._request("GET", "https://api.pinecone.io/indexes/" + self.config.pinecone_index,
                                _startup=True,
                                headers={"Api-Key": self.config.pinecone_key, "X-Pinecone-API-Version": "2025-10"})
         if not isinstance(result, dict):
             configuration_error("pinecone_index", "describe_shape_invalid")
+        if result.get("name") != self.config.pinecone_index:
+            configuration_error("pinecone_index", "index_name_mismatch", field="PINECONE_INDEX")
         if result.get("dimension") != 384:
             configuration_error("pinecone_index", "dimension_mismatch")
         if result.get("metric") != "cosine":
@@ -183,8 +187,7 @@ class RemoteStore:
             configuration_error("pinecone_index", "serverless_cloud_mismatch")
         if serverless.get("region") != "us-east-1":
             configuration_error("pinecone_index", "serverless_region_mismatch")
-        if serverless != {"cloud": "aws", "region": "us-east-1"}:
-            configuration_error("pinecone_index", "serverless_extra_fields")
+        # Pinecone may add metadata; validate required values without rejecting extra keys.
         status = result.get("status")
         if not isinstance(status, dict) or status.get("ready") is not True:
             configuration_error("pinecone_index", "index_not_ready")

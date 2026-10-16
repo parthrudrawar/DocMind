@@ -30,7 +30,7 @@ def values():
         "CLOUDINARY_API_KEY": "dummy-cloud-key-" + SENSITIVE,
         "CLOUDINARY_API_SECRET": "dummy-cloud-secret-" + SENSITIVE,
         "PINECONE_API_KEY": "dummy-pinecone-" + SENSITIVE,
-        "PINECONE_INDEX": "dummy-index",
+        "PINECONE_INDEX": "documind-cloud",
         "PINECONE_HOST": "https://dummy.svc.region.pinecone.io",
         "GROQ_API_KEY": "dummy-groq-" + SENSITIVE,
         "CLOUD_WRITE_KEY": "a" * 64,
@@ -38,7 +38,7 @@ def values():
 
 
 def metadata():
-    return {"dimension": 384, "metric": "cosine", "host": "dummy.svc.region.pinecone.io",
+    return {"name": "documind-cloud", "dimension": 384, "metric": "cosine", "host": "dummy.svc.region.pinecone.io",
             "spec": {"serverless": {"cloud": "aws", "region": "us-east-1"}}, "status": {"ready": True}}
 
 
@@ -131,25 +131,89 @@ def test_oauth_callback_url_check(caplog, bad):
 
 
 @pytest.mark.parametrize("change,reason", [
+    ({"name": SENSITIVE}, "index_name_mismatch"),
     ({"dimension": 1536}, "dimension_mismatch"),
+    ({"dimension": "384"}, "dimension_mismatch"),
     ({"metric": "dotproduct"}, "metric_mismatch"),
     ({"host": "secret.example.test/?token=" + SENSITIVE}, "host_mismatch"),
     ({"spec": None}, "serverless_shape_invalid"),
     ({"spec": {"serverless": []}}, "serverless_shape_invalid"),
     ({"spec": {"serverless": {"cloud": SENSITIVE, "region": "us-east-1"}}}, "serverless_cloud_mismatch"),
     ({"spec": {"serverless": {"cloud": "aws", "region": SENSITIVE}}}, "serverless_region_mismatch"),
-    ({"spec": {"serverless": {"cloud": "aws", "region": "us-east-1", "extra": SENSITIVE}}}, "serverless_extra_fields"),
     ({"status": {"ready": False}}, "index_not_ready"),
+    ({"status": {"ready": "true"}}, "index_not_ready"),
+    ({"status": {"ready": 1}}, "index_not_ready"),
     ({"status": None}, "index_not_ready"),
 ])
-def test_pinecone_metadata_checks_are_precise_and_do_not_log_metadata(caplog, change, reason):
-    response = {**metadata(), **change}
+@pytest.mark.parametrize("with_extra", [False, True])
+def test_pinecone_metadata_checks_are_precise_and_do_not_log_metadata(caplog, change, reason, with_extra):
+    response = copy.deepcopy({**metadata(), **change})
+    spec = response.get("spec")
+    if with_extra and isinstance(spec, dict) and isinstance(spec.get("serverless"), dict):
+        spec["serverless"]["extra"] = SENSITIVE
     store = RemoteStore(Config.load(values()), transport=httpx.MockTransport(
         lambda _request: httpx.Response(200, json=response)))
     with pytest.raises(CloudError) as caught:
         store.validate_index()
     assert caught.value.code == "configuration"
-    diagnostic(caplog, "pinecone_index", reason, "PINECONE_HOST" if reason == "host_mismatch" else None)
+    field = {"host_mismatch": "PINECONE_HOST", "index_name_mismatch": "PINECONE_INDEX"}.get(reason)
+    diagnostic(caplog, "pinecone_index", reason, field)
+
+
+@pytest.mark.parametrize("extra", [{}, {"extra": SENSITIVE},
+                                 {"read_capacity": {"mode": "OnDemand"}, "future_metadata": {"value": SENSITIVE}}])
+def test_valid_pinecone_index_accepts_additional_metadata_without_logging_it(caplog, extra):
+    response = metadata()
+    response["spec"]["serverless"].update(extra)
+    def handler(request):
+        assert request.url.path == "/indexes/documind-cloud"
+        return httpx.Response(200, json=response)
+    store = RemoteStore(Config.load(values()), transport=httpx.MockTransport(handler))
+    store.validate_index()
+    assert not [record for record in caplog.records if record.name == LOGGER]
+    assert SENSITIVE not in caplog.text
+
+
+@pytest.mark.parametrize("path,reason", [
+    (("name",), "index_name_mismatch"),
+    (("dimension",), "dimension_mismatch"),
+    (("metric",), "metric_mismatch"),
+    (("host",), "host_mismatch"),
+    (("spec",), "serverless_shape_invalid"),
+    (("spec", "serverless"), "serverless_shape_invalid"),
+    (("spec", "serverless", "cloud"), "serverless_cloud_mismatch"),
+    (("spec", "serverless", "region"), "serverless_region_mismatch"),
+    (("status",), "index_not_ready"),
+    (("status", "ready"), "index_not_ready"),
+])
+@pytest.mark.parametrize("missing", [False, True])
+def test_required_index_values_cannot_be_missing_or_null(caplog, path, reason, missing):
+    response = metadata()
+    response["spec"]["serverless"]["extra"] = SENSITIVE
+    parent = response
+    for key in path[:-1]:
+        parent = parent[key]
+    if missing:
+        del parent[path[-1]]
+    else:
+        parent[path[-1]] = None
+    store = RemoteStore(Config.load(values()), transport=httpx.MockTransport(
+        lambda _request: httpx.Response(200, json=response)))
+    with pytest.raises(CloudError) as caught:
+        store.validate_index()
+    assert caught.value.code == "configuration"
+    diagnostic(caplog, "pinecone_index", reason)
+
+
+def test_wrong_configured_index_is_rejected_before_network_access(caplog):
+    def handler(_request):
+        pytest.fail("An unexpected index must never be requested")
+    store = RemoteStore(Config.load({**values(), "PINECONE_INDEX": "other-index"}),
+                        transport=httpx.MockTransport(handler))
+    with pytest.raises(CloudError) as caught:
+        store.validate_index()
+    assert caught.value.code == "configuration"
+    diagnostic(caplog, "pinecone_index", "index_name_mismatch", "PINECONE_INDEX")
 
 
 def test_invalid_pinecone_response_shape(caplog):

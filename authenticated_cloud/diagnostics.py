@@ -11,7 +11,7 @@ def startup_diagnostic(stage, reason, *, field=None, http_status=None):
                "describe_http_error", "describe_rate_limited", "describe_timeout", "describe_network_error",
                "describe_invalid_json", "describe_failed", "describe_shape_invalid", "dimension_mismatch",
                "metric_mismatch", "host_mismatch", "serverless_shape_invalid", "serverless_cloud_mismatch",
-               "serverless_region_mismatch", "serverless_extra_fields", "index_not_ready", "unexpected_exception")
+               "serverless_region_mismatch", "index_name_mismatch", "index_not_ready", "unexpected_exception")
     fields = ("FREE_PLANS_CONFIRMED", "SUPABASE_URL", "SUPABASE_PUBLISHABLE_KEY", "APP_URL",
               "CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET", "PINECONE_API_KEY",
               "PINECONE_INDEX", "PINECONE_HOST", "GROQ_API_KEY", "CLOUD_WRITE_KEY")
