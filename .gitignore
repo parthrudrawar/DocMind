@@ -107,3 +107,8 @@ node_modules/
 Dockerfile*
 docker-compose*.yml
 docker-compose*.yaml
+
+# Allow only the focused, dummy-only diagnostic regression test source.
+!/tests/
+/tests/*
+!/tests/test_startup_diagnostics.py

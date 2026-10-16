@@ -9,7 +9,7 @@ if str(ROOT) not in sys.path:
 import streamlit as st  # noqa: E402
 import streamlit.components.v1 as components  # noqa: E402
 
-from authenticated_cloud.auth import AuthBroker, CloudError, Supabase  # noqa: E402
+from authenticated_cloud.auth import AuthBroker, CloudError, Supabase, startup_diagnostic  # noqa: E402
 from authenticated_cloud.providers import Config, RemoteStore  # noqa: E402
 from authenticated_cloud.service import CloudService  # noqa: E402
 from frontend.citations import render_answer_html  # noqa: E402
@@ -19,11 +19,23 @@ browser_auth = components.declare_component("documind_cloud_auth", path=str(Path
 
 @st.cache_resource(show_spinner=False)
 def get_service():
-    config = Config.load(st.secrets)
-    db = Supabase(config.supabase_url, config.supabase_key, config.write_key)
-    store = RemoteStore(config)
-    store.validate_index()  # never create/upgrade an index automatically
-    return CloudService(AuthBroker(db, config.app_url), store, config.groq_key)
+    stage = "secrets"
+    try:
+        config = Config.load(st.secrets)
+        stage = "supabase"
+        db = Supabase(config.supabase_url, config.supabase_key, config.write_key)
+        stage = "pinecone_index"
+        store = RemoteStore(config)
+        store.validate_index()  # never create/upgrade an index automatically
+        stage = "oauth"
+        auth = AuthBroker(db, config.app_url)
+        stage = "service"
+        return CloudService(auth, store, config.groq_key)
+    except CloudError:
+        raise  # expected validation failures already logged safe labels at their source
+    except Exception:
+        startup_diagnostic(stage, "unexpected_exception")
+        raise
 
 
 def show_answer(answer, citations):

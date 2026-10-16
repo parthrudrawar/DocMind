@@ -9,7 +9,7 @@ from uuid import UUID
 
 import httpx
 
-from authenticated_cloud.auth import CloudError
+from authenticated_cloud.auth import CloudError, configuration_error, startup_diagnostic
 
 MAX_BYTES = 2 * 1024 * 1024
 
@@ -31,25 +31,31 @@ class Config:
     @classmethod
     def load(cls, values):
         try:
+            if "FREE_PLANS_CONFIRMED" not in values:
+                configuration_error("secrets", "missing_variable", field="FREE_PLANS_CONFIRMED")
             if values["FREE_PLANS_CONFIRMED"] is not True:
-                raise ValueError
+                configuration_error("secrets", "boolean_true_required", field="FREE_PLANS_CONFIRMED")
             keys = ("SUPABASE_URL", "SUPABASE_PUBLISHABLE_KEY", "APP_URL", "CLOUDINARY_CLOUD_NAME",
                     "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET", "PINECONE_API_KEY",
                     "PINECONE_INDEX", "PINECONE_HOST", "GROQ_API_KEY", "CLOUD_WRITE_KEY")
+            for key in keys:
+                if key not in values:
+                    configuration_error("secrets", "missing_variable", field=key)
+                if not isinstance(values[key], str) or not values[key]:
+                    configuration_error("secrets", "nonempty_string_required", field=key)
             result = cls(*(values[key] for key in keys))
-            if any(not isinstance(getattr(result, name), str) or not getattr(result, name)
-                   for name in result.__dataclass_fields__):
-                raise ValueError
-            if (not re.fullmatch(r"[a-z0-9-]+", result.cloud_name)
-                    or not re.fullmatch(r"[a-z0-9-]+", result.pinecone_index)
-                    or not re.fullmatch(r"https://[a-z0-9.-]+\.svc\.[a-z0-9.-]+\.pinecone\.io", result.pinecone_host)):
-                raise ValueError
+            if not re.fullmatch(r"[a-z0-9-]+", result.cloud_name):
+                configuration_error("secrets", "cloud_name_format", field="CLOUDINARY_CLOUD_NAME")
+            if not re.fullmatch(r"[a-z0-9-]+", result.pinecone_index):
+                configuration_error("secrets", "index_name_format", field="PINECONE_INDEX")
+            if not re.fullmatch(r"https://[a-z0-9.-]+\.svc\.[a-z0-9.-]+\.pinecone\.io", result.pinecone_host):
+                configuration_error("secrets", "index_host_format", field="PINECONE_HOST")
             # New publishable key, NOT a service-role or legacy JWT key.
             if not result.supabase_key.startswith("sb_publishable_"):
-                raise ValueError
+                configuration_error("secrets", "publishable_key_required", field="SUPABASE_PUBLISHABLE_KEY")
             return result
         except (KeyError, TypeError, ValueError):
-            raise CloudError("configuration") from None
+            configuration_error("secrets", "secrets_parse_or_shape_error")
 
 
 def scope(user_id, doc_id=None):
@@ -71,17 +77,37 @@ class RemoteStore:
     def __init__(self, config, *, transport=None, clock=time.time):
         self.config, self.transport, self.clock = config, transport, clock
 
-    def _request(self, method, url, **kwargs):
+    def _request(self, method, url, *, _startup=False, **kwargs):
         try:
             with httpx.Client(timeout=30, follow_redirects=False, transport=self.transport) as client:
                 result = client.request(method, url, **kwargs)
             if result.status_code == 429:
+                if _startup:
+                    startup_diagnostic("pinecone_index", "describe_rate_limited", http_status=429)
                 raise CloudError("limit")
             result.raise_for_status()
             return result.json()
         except CloudError:
             raise
+        except httpx.HTTPStatusError as error:
+            if _startup:
+                startup_diagnostic("pinecone_index", "describe_http_error", http_status=error.response.status_code)
+            raise CloudError("unavailable") from None
+        except httpx.TimeoutException:
+            if _startup:
+                startup_diagnostic("pinecone_index", "describe_timeout")
+            raise CloudError("unavailable") from None
+        except httpx.RequestError:
+            if _startup:
+                startup_diagnostic("pinecone_index", "describe_network_error")
+            raise CloudError("unavailable") from None
+        except ValueError:
+            if _startup:
+                startup_diagnostic("pinecone_index", "describe_invalid_json")
+            raise CloudError("unavailable") from None
         except Exception:
+            if _startup:
+                startup_diagnostic("pinecone_index", "describe_failed")
             raise CloudError("unavailable") from None
 
     def _cloud(self, operation, fields, data=None):
@@ -138,12 +164,29 @@ class RemoteStore:
 
     def validate_index(self):
         result = self._request("GET", "https://api.pinecone.io/indexes/" + self.config.pinecone_index,
+                               _startup=True,
                                headers={"Api-Key": self.config.pinecone_key, "X-Pinecone-API-Version": "2025-10"})
-        if (result.get("dimension") != 384 or result.get("metric") != "cosine"
-                or "https://" + result.get("host", "") != self.config.pinecone_host
-                or result.get("spec", {}).get("serverless") != {"cloud": "aws", "region": "us-east-1"}
-                or result.get("status", {}).get("ready") is not True):
-            raise CloudError("configuration")
+        if not isinstance(result, dict):
+            configuration_error("pinecone_index", "describe_shape_invalid")
+        if result.get("dimension") != 384:
+            configuration_error("pinecone_index", "dimension_mismatch")
+        if result.get("metric") != "cosine":
+            configuration_error("pinecone_index", "metric_mismatch")
+        if not isinstance(result.get("host"), str) or "https://" + result["host"] != self.config.pinecone_host:
+            configuration_error("pinecone_index", "host_mismatch", field="PINECONE_HOST")
+        spec = result.get("spec")
+        serverless = spec.get("serverless") if isinstance(spec, dict) else None
+        if not isinstance(serverless, dict):
+            configuration_error("pinecone_index", "serverless_shape_invalid")
+        if serverless.get("cloud") != "aws":
+            configuration_error("pinecone_index", "serverless_cloud_mismatch")
+        if serverless.get("region") != "us-east-1":
+            configuration_error("pinecone_index", "serverless_region_mismatch")
+        if serverless != {"cloud": "aws", "region": "us-east-1"}:
+            configuration_error("pinecone_index", "serverless_extra_fields")
+        status = result.get("status")
+        if not isinstance(status, dict) or status.get("ready") is not True:
+            configuration_error("pinecone_index", "index_not_ready")
 
     def upsert(self, owner, doc_id, chunks, vectors):
         namespace, _ = scope(owner, doc_id)

@@ -4,6 +4,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import hmac
+import logging
 import re
 import secrets
 import threading
@@ -33,6 +34,32 @@ class CloudError(Exception):
         super().__init__(self.MESSAGES[code])
 
 
+def startup_diagnostic(stage, reason, *, field=None, http_status=None):
+    """Log only allowlisted labels, never exception text, values, URLs or headers."""
+    stages = ("secrets", "supabase", "pinecone_index", "oauth", "service")
+    reasons = ("missing_variable", "boolean_true_required", "nonempty_string_required",
+               "cloud_name_format", "index_name_format", "index_host_format", "publishable_key_required",
+               "secrets_parse_or_shape_error", "project_url_format", "write_key_format", "app_url_format",
+               "describe_http_error", "describe_rate_limited", "describe_timeout", "describe_network_error",
+               "describe_invalid_json", "describe_failed", "describe_shape_invalid", "dimension_mismatch",
+               "metric_mismatch", "host_mismatch", "serverless_shape_invalid", "serverless_cloud_mismatch",
+               "serverless_region_mismatch", "serverless_extra_fields", "index_not_ready", "unexpected_exception")
+    fields = ("FREE_PLANS_CONFIRMED", "SUPABASE_URL", "SUPABASE_PUBLISHABLE_KEY", "APP_URL",
+              "CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET", "PINECONE_API_KEY",
+              "PINECONE_INDEX", "PINECONE_HOST", "GROQ_API_KEY", "CLOUD_WRITE_KEY")
+    safe_stage = stage if isinstance(stage, str) and stage in stages else "startup"
+    safe_reason = reason if isinstance(reason, str) and reason in reasons else "unexpected_exception"
+    safe_field = " field=" + field if isinstance(field, str) and field in fields else ""
+    safe_status = " http_status=" + str(http_status) if type(http_status) is int and 100 <= http_status <= 599 else ""
+    logging.getLogger("documind.cloud.startup").warning(
+        "documind_startup stage=%s reason=%s%s%s", safe_stage, safe_reason, safe_field, safe_status)
+
+
+def configuration_error(stage, reason, *, field=None):
+    startup_diagnostic(stage, reason, field=field)
+    raise CloudError("configuration") from None
+
+
 def digest(value):
     if not isinstance(value, str) or not re.fullmatch(r"[a-f0-9]{64}", value):
         raise CloudError("expired")
@@ -52,10 +79,12 @@ class Supabase:
     """Stateless HTTP requests: no cached client with mutable per-user headers."""
 
     def __init__(self, url, key, write_key, *, transport=None):
-        if not re.fullmatch(r"https://[a-z0-9-]+\.supabase\.co", url) or not key:
-            raise CloudError("configuration")
+        if not re.fullmatch(r"https://[a-z0-9-]+\.supabase\.co", url):
+            configuration_error("supabase", "project_url_format", field="SUPABASE_URL")
+        if not key:
+            configuration_error("supabase", "nonempty_string_required", field="SUPABASE_PUBLISHABLE_KEY")
         if not re.fullmatch(r"[a-f0-9]{64}", write_key):
-            raise CloudError("configuration")
+            configuration_error("supabase", "write_key_format", field="CLOUD_WRITE_KEY")
         self.url, self._key, self._write_key, self._transport = url, key, write_key, transport
 
     def call(self, path, *, token=None, payload=None, method="POST"):
@@ -99,7 +128,7 @@ class AuthBroker:
 
     def __init__(self, db, app_url, *, clock=time.time):
         if not re.fullmatch(r"https://[a-z0-9-]+\.streamlit\.app/", app_url):
-            raise CloudError("configuration")
+            configuration_error("oauth", "app_url_format", field="APP_URL")
         self.db, self.app_url, self.clock = db, app_url, clock
         self._lock = threading.RLock()
         self._flows, self._sessions = {}, {}
