@@ -112,3 +112,12 @@ docker-compose*.yaml
 !/tests/
 /tests/*
 !/tests/test_startup_diagnostics.py
+!/tests/test_session_cloud.py
+!/tests/test_pdf_preparation.py
+!/tests/test_session_retrieval.py
+!/tests/test_answer_context.py
+!/tests/test_generation.py
+!/tests/test_guides.py
+!/tests/test_comparisons.py
+!/tests/test_exploration.py
+!/tests/test_preview_deployment.py

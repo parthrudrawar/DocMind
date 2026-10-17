@@ -1,0 +1,177 @@
+{
+  "scope": "Original-source reranking/expansion, no provider generation",
+  "questions": 12,
+  "documents": 3,
+  "pages": 18,
+  "candidate": {
+    "recall@6": 1,
+    "MRR@6": 1,
+    "evaluated": 12
+  },
+  "original": {
+    "recall@6": 1,
+    "MRR@6": 1,
+    "evaluated": 12
+  },
+  "blocked": [],
+  "original_actual_context_tokens": [
+    5794,
+    5322,
+    3535,
+    5166,
+    5784,
+    5434,
+    7606,
+    5198,
+    5169,
+    5387,
+    5165,
+    5466
+  ],
+  "identical_selected_order": 12,
+  "identical_expanded_order": 12,
+  "fixture_citation_provenance": {
+    "valid": 12,
+    "checked": 12
+  },
+  "metrics": [
+    {
+      "wall_seconds": 5.172000000020489,
+      "cpu_seconds": 4.875,
+      "peak_rss_bytes": 435765248,
+      "actual_context_tokens": 5794,
+      "embedding_init_seconds": 0,
+      "reranker_init_seconds": 0.48400000017136335
+    },
+    {
+      "wall_seconds": 4.640000000130385,
+      "cpu_seconds": 4.375,
+      "peak_rss_bytes": 435765248,
+      "actual_context_tokens": 5322,
+      "embedding_init_seconds": 0,
+      "reranker_init_seconds": 0
+    },
+    {
+      "wall_seconds": 4.219000000040978,
+      "cpu_seconds": 4.046875,
+      "peak_rss_bytes": 435765248,
+      "actual_context_tokens": 3535,
+      "embedding_init_seconds": 0,
+      "reranker_init_seconds": 0
+    },
+    {
+      "wall_seconds": 3.9369999999180436,
+      "cpu_seconds": 3.671875,
+      "peak_rss_bytes": 435765248,
+      "actual_context_tokens": 5166,
+      "embedding_init_seconds": 0,
+      "reranker_init_seconds": 0
+    },
+    {
+      "wall_seconds": 4.313000000081956,
+      "cpu_seconds": 3.890625,
+      "peak_rss_bytes": 435765248,
+      "actual_context_tokens": 5784,
+      "embedding_init_seconds": 0,
+      "reranker_init_seconds": 0
+    },
+    {
+      "wall_seconds": 4.141000000061467,
+      "cpu_seconds": 3.609375,
+      "peak_rss_bytes": 435765248,
+      "actual_context_tokens": 5434,
+      "embedding_init_seconds": 0,
+      "reranker_init_seconds": 0
+    },
+    {
+      "wall_seconds": 5.468000000109896,
+      "cpu_seconds": 5.15625,
+      "peak_rss_bytes": 435765248,
+      "actual_context_tokens": 7606,
+      "embedding_init_seconds": 0,
+      "reranker_init_seconds": 0
+    },
+    {
+      "wall_seconds": 5.311999999918044,
+      "cpu_seconds": 5.21875,
+      "peak_rss_bytes": 435765248,
+      "actual_context_tokens": 5198,
+      "embedding_init_seconds": 0,
+      "reranker_init_seconds": 0
+    },
+    {
+      "wall_seconds": 4.765000000130385,
+      "cpu_seconds": 4.484375,
+      "peak_rss_bytes": 435765248,
+      "actual_context_tokens": 5169,
+      "embedding_init_seconds": 0,
+      "reranker_init_seconds": 0
+    },
+    {
+      "wall_seconds": 4.672000000020489,
+      "cpu_seconds": 4.46875,
+      "peak_rss_bytes": 435765248,
+      "actual_context_tokens": 5387,
+      "embedding_init_seconds": 0,
+      "reranker_init_seconds": 0
+    },
+    {
+      "wall_seconds": 4.969000000040978,
+      "cpu_seconds": 4.796875,
+      "peak_rss_bytes": 435765248,
+      "actual_context_tokens": 5165,
+      "embedding_init_seconds": 0,
+      "reranker_init_seconds": 0
+    },
+    {
+      "wall_seconds": 4.905999999959022,
+      "cpu_seconds": 4.671875,
+      "peak_rss_bytes": 435765248,
+      "actual_context_tokens": 5466,
+      "embedding_init_seconds": 0,
+      "reranker_init_seconds": 0
+    }
+  ],
+  "context_request_seconds": {
+    "first": 5.875,
+    "median": 4.866999999969266,
+    "max": 5.875
+  },
+  "reference_sha256": {
+    "reranker": "6ecda5326b59c8e912910cb4d25673707f317efcb7587e58d0087157b416e734",
+    "context": "fc281869be0a14d94c2da5e43df10ba13996c13c7f3cb465112d16037bb45f15",
+    "retriever": "abb7c6fd78246fc506fc83eececab16173da5a06febbe807973a28e0370b7a17",
+    "hybrid": "4082dd0e6cc5c26b6e8bac866bdce946a5100289958bb4c91139b1d28806ba6e",
+    "vector": "c0dece9f5027b11ce790414febeafa14a6d53a32126641999cffd3b1444e9da3",
+    "bm25": "b4787c7d5c12021802a0fec621965433ce5187c6d08fb2ca6ee4b52f586f9825",
+    "rrf": "276e2c0e1aa7179fa372609b3c059e483c1ae81d4b4d620d30ebd7cb86259ab3"
+  },
+  "notes": [
+    "Original source under matched Docker retrieval library versions on Windows/Python 3.12",
+    "Original SQL reads use a predicate-filtered fixture adapter over the identical verified snapshot",
+    "Candidate batch size 1 versus original default 64",
+    "No LLM answer or streaming accuracy measured"
+  ],
+  "runtime": {
+    "platform": "Windows x64",
+    "python": "3.12.4",
+    "packages": {
+      "numpy": "2.4.6",
+      "faiss-cpu": "1.12.0",
+      "fastembed": "0.9.0",
+      "onnxruntime": "1.31.0",
+      "tokenizers": "0.23.3"
+    }
+  },
+  "reranker_model": {
+    "name": "Xenova/ms-marco-MiniLM-L-6-v2",
+    "sha256": "c623d0bcb99f4622beb413eaef00cfbe5db20df9f1dd982da4b4f26022881870"
+  },
+  "measurement_limits": [
+    "All source PDFs/claims are synthetic and non-sensitive",
+    "Reference uses the same fixed verified Phase 2B snapshot; SQL acquisition is replaced by predicate-filtered fixture rows",
+    "Citations are deterministic extractive fixtures, not Groq responses or a semantic-entailment benchmark",
+    "Cold reranker initialization uses local cached weights and a warm embedding worker; no download/startup/cloud latency claim",
+    "Groq streaming, rate limiting, quotas and interrupted-turn persistence have not been implemented in this milestone"
+  ]
+}

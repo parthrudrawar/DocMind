@@ -1,0 +1,4 @@
+# Future approved Community Cloud deployment: merge into root packages.txt.
+# This example is not automatically installed and OCR remains disabled by default.
+tesseract-ocr
+tesseract-ocr-eng

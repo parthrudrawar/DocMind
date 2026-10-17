@@ -1,0 +1,226 @@
+{
+  "scope": "Original pre-rerank hybrid retrieval, not full QA/cross-encoder parity",
+  "documents": 3,
+  "pages": 18,
+  "questions": 12,
+  "searchable_chunks": 25,
+  "candidate": {
+    "recall@1": 0.9166666666666666,
+    "MRR@30": 1,
+    "recall@5": 1,
+    "recall@10": 1
+  },
+  "original": {
+    "recall@1": 0.9166666666666666,
+    "MRR@30": 1,
+    "recall@5": 1,
+    "recall@10": 1
+  },
+  "identical_top30_order_queries": 12,
+  "chunk_boundaries_match": true,
+  "indexing": [
+    {
+      "status": "indexed",
+      "chunks": 8,
+      "metrics": {
+        "wall_seconds": 1.9369999999180436,
+        "cpu_seconds": 1.78125,
+        "peak_rss_bytes": 329490432
+      }
+    },
+    {
+      "status": "indexed",
+      "chunks": 17,
+      "metrics": {
+        "wall_seconds": 4.484999999869615,
+        "cpu_seconds": 3.6875,
+        "peak_rss_bytes": 328749056
+      }
+    },
+    {
+      "status": "indexed",
+      "chunks": 25,
+      "metrics": {
+        "wall_seconds": 5.547000000020489,
+        "cpu_seconds": 5.09375,
+        "peak_rss_bytes": 329682944
+      }
+    }
+  ],
+  "preparation": [
+    {
+      "wall_seconds": 0.282,
+      "cpu_seconds": 0.2188,
+      "peak_rss_bytes": 154411008
+    },
+    {
+      "wall_seconds": 0.203,
+      "cpu_seconds": 0.1562,
+      "peak_rss_bytes": 153964544
+    },
+    {
+      "wall_seconds": 0.266,
+      "cpu_seconds": 0.2188,
+      "peak_rss_bytes": 154021888
+    }
+  ],
+  "retrieval_wall_seconds": {
+    "median": 0.125,
+    "max": 0.1559999999590218
+  },
+  "evaluation_host_peak_rss_bytes": 396898304,
+  "source_sha256": {
+    "chunker": "96615b3484ea4a12631b33a0d46e1464df24d119cd1bade72c944c4e56ec7124",
+    "embedder": "eec871dadb983fa2ac4d2686370475dbd09ff152df3ff51b63962cb1a71114e0",
+    "vector": "c0dece9f5027b11ce790414febeafa14a6d53a32126641999cffd3b1444e9da3",
+    "bm25": "b4787c7d5c12021802a0fec621965433ce5187c6d08fb2ca6ee4b52f586f9825",
+    "rrf": "276e2c0e1aa7179fa372609b3c059e483c1ae81d4b4d620d30ebd7cb86259ab3",
+    "hybrid": "4082dd0e6cc5c26b6e8bac866bdce946a5100289958bb4c91139b1d28806ba6e"
+  },
+  "questions_detail": [
+    {
+      "question": "What is the capacity of SOL-17?",
+      "expected": [
+        "SOL-17"
+      ],
+      "kind": "keyword",
+      "candidate_found_top5": [
+        "SOL-17"
+      ]
+    },
+    {
+      "question": "What medicine side effects should patients watch for?",
+      "expected": [
+        "MED-71"
+      ],
+      "kind": "semantic",
+      "candidate_found_top5": [
+        "MED-71"
+      ]
+    },
+    {
+      "question": "How does the clinic keep blood specimens cold during delivery?",
+      "expected": [
+        "LAB-54"
+      ],
+      "kind": "semantic",
+      "candidate_found_top5": [
+        "LAB-54"
+      ]
+    },
+    {
+      "question": "How long can the hospital keep running on stored emergency electricity?",
+      "expected": [
+        "CELL-63"
+      ],
+      "kind": "semantic",
+      "candidate_found_top5": [
+        "CELL-63"
+      ]
+    },
+    {
+      "question": "Which plants protect fish travelling upstream?",
+      "expected": [
+        "HYD-09"
+      ],
+      "kind": "semantic",
+      "candidate_found_top5": [
+        "HYD-09"
+      ]
+    },
+    {
+      "question": "What happens if a software release starts failing?",
+      "expected": [
+        "DEPLOY-84"
+      ],
+      "kind": "semantic",
+      "candidate_found_top5": [
+        "DEPLOY-84"
+      ]
+    },
+    {
+      "question": "How many hardware keys does AUTH-7K require?",
+      "expected": [
+        "AUTH-7K"
+      ],
+      "kind": "keyword",
+      "candidate_found_top5": [
+        "AUTH-7K"
+      ]
+    },
+    {
+      "question": "What is the RETAIN-93 invoice retention period?",
+      "expected": [
+        "RETAIN-93"
+      ],
+      "kind": "keyword",
+      "candidate_found_top5": [
+        "RETAIN-93"
+      ]
+    },
+    {
+      "question": "When are BACK-65 backups and restore drills performed?",
+      "expected": [
+        "BACK-65"
+      ],
+      "kind": "keyword",
+      "candidate_found_top5": [
+        "BACK-65"
+      ]
+    },
+    {
+      "question": "How are temperature problems handled for VACC-38?",
+      "expected": [
+        "VACC-38"
+      ],
+      "kind": "keyword",
+      "candidate_found_top5": [
+        "VACC-38"
+      ]
+    },
+    {
+      "question": "Compare emergency blackout recovery and network outage escalation.",
+      "expected": [
+        "GRID-88",
+        "NET-28"
+      ],
+      "kind": "multi_pdf",
+      "candidate_found_top5": [
+        "GRID-88",
+        "NET-28"
+      ]
+    },
+    {
+      "question": "Compare battery hospital backup with database backup recovery.",
+      "expected": [
+        "CELL-63",
+        "BACK-65"
+      ],
+      "kind": "multi_pdf",
+      "candidate_found_top5": [
+        "CELL-63",
+        "BACK-65"
+      ]
+    }
+  ],
+  "runtime": {
+    "python": "3.12.4",
+    "platform": "Windows x64",
+    "dependencies": {
+      "fastembed": "0.9.0",
+      "faiss-cpu": "1.12.0",
+      "numpy": "2.4.6",
+      "onnxruntime": "1.31.0",
+      "rank-bm25": "0.2.2",
+      "pymupdf": "1.26.7"
+    }
+  },
+  "model_sha256": "bbd7b466f6d58e646fdc2bd5fd67b2f5e93c0b687011bd4548c420f7bd46f0c5",
+  "limitations": [
+    "Synthetic 12-question sample, not a real-user relevance benchmark",
+    "Original source under the Docker-locked retrieval dependency versions, Python 3.12/Windows; not running Docker binaries",
+    "Worker build timings exclude model initialization and real Supabase authentication",
+    "Host RSS includes the independent original-source evaluator; it is not deployed Streamlit RAM",
+    "No 100 MiB processing, Linux runtime, browser OAuth or Groq generation verified"
+  ]
+}

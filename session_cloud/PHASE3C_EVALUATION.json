@@ -1,0 +1,62 @@
+{
+  "scope": "Windows/Python 3.12 native synthetic PDFs and original-source comparison; all provider responses MOCKED",
+  "real_groq_requests": 0,
+  "actual_provider_tokens": null,
+  "semantic_answer_or_analysis_accuracy": null,
+  "focused_tests": {"passed": 46, "native_all_seven_fixture": true},
+  "final_verification": {
+    "full_suite_passed": 409, "full_suite_skipped": 1, "full_suite_seconds": 339.53,
+    "skip_reason": "Existing Windows OS symlink-creation permission test",
+    "ruff": "passed", "imports_syntax_and_preview_config": "passed",
+    "exact_pins_and_direct_runtime_constraints": "passed", "credential_pattern_scan_source_files": 109,
+    "initial_suite": {"passed": 407, "skipped": 1, "failed": 1, "fixture_errors": 1},
+    "fixed_storage_regression": {"before_empty_db_bytes": 73728, "after_empty_db_bytes": 65536,
+      "limit_bytes_preserved": 65536, "fix": "UTC upload timestamp stored in document row, not extra table"},
+    "fixture_upload_deadline_error": "Did not recur in isolated and final full reruns; deadline unchanged; exact host stall cause unverified",
+    "staged_files": 0, "commit_push_deployment": false
+  },
+  "two_one_page_pdfs": {
+    "worker_lifetime_peak_rss_bytes": 370614272,
+    "cached_weight_first_reranker_init_seconds": 0.344,
+    "cold_network_model_initialization": null,
+    "analyses": {
+      "guide": {"wall_seconds": 0.781, "provider_calls": 1, "reserved_token_upper_bound": 1425},
+      "brief": {"wall_seconds": 0.437, "provider_calls": 1, "reserved_token_upper_bound": 1262},
+      "contradictions": {"wall_seconds": 0.156, "provider_calls": 1, "reserved_token_upper_bound": 3014},
+      "gaps": {"wall_seconds": 0.172, "provider_calls": 1, "reserved_token_upper_bound": 2823},
+      "questions": {"wall_seconds": 0.140, "provider_calls": 1, "reserved_token_upper_bound": 2946},
+      "insights": {"wall_seconds": 0.125, "provider_calls": 1, "reserved_token_upper_bound": 3284},
+      "timeline": {"wall_seconds": 0.172, "provider_calls": 2, "reserved_token_upper_bound": 6652}
+    }
+  },
+  "fresh_hybrid_retrieval_comparison": {
+    "documents": 3, "pages": 18, "questions": 12, "searchable_chunks": 25,
+    "candidate": {"recall@1": 0.9166666666666666, "recall@5": 1, "recall@10": 1, "MRR@30": 1},
+    "original": {"recall@1": 0.9166666666666666, "recall@5": 1, "recall@10": 1, "MRR@30": 1},
+    "identical_top30_order_queries": 12, "chunk_boundaries_match": true,
+    "retrieval_wall_seconds": {"median": 0.3745, "max": 0.547},
+    "evaluation_driver_peak_rss_bytes": 397611008
+  },
+  "fresh_reranked_context_comparison": {
+    "documents": 3, "pages": 18, "questions": 12,
+    "candidate": {"recall@6": 1, "MRR@6": 1}, "original": {"recall@6": 1, "MRR@6": 1},
+    "blocked": [], "identical_selected_order": 12, "identical_expanded_order": 12,
+    "fixture_citation_provenance": {"valid": 12, "checked": 12},
+    "request_seconds": {"first": 3.266, "median": 4.9845, "max": 6.031},
+    "worker_lifetime_peak_rss_bytes": 436428800,
+    "cached_weight_reranker_init_seconds": 0.265
+  },
+  "dependency_check": {
+    "python": "3.12.4", "platform": "Windows x64", "direct_pins": 13,
+    "linux_cp312_x86_64_or_universal_wheels_verified_on_pypi": 13,
+    "linux_runtime_execution": false, "community_cloud_execution": false
+  },
+  "limitations": [
+    "Mocked analysis findings and citation fixtures do not establish real LLM correctness, semantic entailment or real provider consumption",
+    "Initial concurrent context benchmark hit PDF timeout; fresh isolated benchmark passed without relaxing limits",
+    "Original source AST and SQL fixture adapters are read-only; no original database/provider settings are imported",
+    "Measured peaks are worker or evaluation-driver high-water marks, not total Streamlit application memory",
+    "No real Google/two-browser, cold network downloads, OCR or 100 MB processing acceptance",
+    "Linux wheel availability is not a clean Linux resolver/runtime or host-capacity verification"
+  ]
+}

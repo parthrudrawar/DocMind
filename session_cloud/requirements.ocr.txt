@@ -1,0 +1,3 @@
+# Optional only after OCR acceptance testing; does not activate OCR or billing.
+-r requirements.txt
+pytesseract==0.3.13

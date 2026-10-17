@@ -1,0 +1,33 @@
+{
+  "scope": "Four synthetic two-PDF fixtures: genuine parsing, original chunking/MiniLM/FAISS/BM25 snapshot creation and verified analysis sampling; MOCKED Groq SSE",
+  "fixtures": ["contradictory", "consistent", "incomplete", "unrelated"],
+  "real_groq_requests": 0,
+  "actual_provider_tokens": null,
+  "semantic_accuracy": null,
+  "verification": {"full_suite_passed": 363, "full_suite_skipped": 1, "full_suite_seconds": 277.01,
+    "phase3b_test_count": 42, "skip_reason": "Existing Windows symlink-creation permission test",
+    "ruff": "passed", "imports_and_syntax": "passed", "exact_dependency_pins": 13,
+    "credential_pattern_scan_source_files": 102},
+  "measurements": [
+    {"fixture": "contradictory", "contradictions_seconds": 0.203, "gaps_seconds": 0.125, "worker_peak_rss_bytes": 329744384, "contradiction_reserved_tokens_upper_bound": 2760, "gap_reserved_tokens_upper_bound": 2569},
+    {"fixture": "consistent", "contradictions_seconds": 0.344, "gaps_seconds": 0.203, "worker_peak_rss_bytes": 330072064, "contradiction_reserved_tokens_upper_bound": 2765, "gap_reserved_tokens_upper_bound": 2574},
+    {"fixture": "incomplete", "contradictions_seconds": 0.219, "gaps_seconds": 0.219, "worker_peak_rss_bytes": 329633792, "contradiction_reserved_tokens_upper_bound": 2763, "gap_reserved_tokens_upper_bound": 2572},
+    {"fixture": "unrelated", "contradictions_seconds": 0.219, "gaps_seconds": 0.250, "worker_peak_rss_bytes": 330866688, "contradiction_reserved_tokens_upper_bound": 2752, "gap_reserved_tokens_upper_bound": 2561}
+  ],
+  "runtime": {"platform": "Windows x64", "python": "3.12.4", "numpy": "2.4.6", "faiss-cpu": "1.12.0", "fastembed": "0.9.0", "onnxruntime": "1.31.0", "tokenizers": "0.23.3"},
+  "reference_checks": [
+    "Actual original SQL loader functions executed with isolated fixture rows; same L3 counts, prefix limits, L1 preference and space-joined L3 fallback",
+    "Actual original comparison/gap functions executed with mocked LLM; complete system and human prompts compared byte-for-byte on all four fixtures",
+    "Original contradiction persistence threshold and provider parameters evaluated directly from original AST",
+    "Original comparison and knowledge-gap HTML cards evaluated and compared directly",
+    "Original all-indexed scope, pair ordering, output fields and model-signal semantics retained"
+  ],
+  "limitations": [
+    "Mocked findings test plumbing and reference fidelity, NOT live model ability to distinguish contradictions, consistent wording, gaps or unrelated topics",
+    "Original analyses sample paragraphs/summaries; they do not prove contradictions or absence throughout complete PDFs and do not perform hybrid retrieval",
+    "Peak RSS is native worker lifetime high-water mark after indexing, NOT total Streamlit memory or cloud-host capacity",
+    "Analysis latency uses warm native indexes and fixed local HTTP mocks; cold downloads, real Groq latency and large PDFs are not measured",
+    "Token figures are pessimistic reservations, not measured provider consumption",
+    "No live OAuth, two-browser, Linux or Community Cloud readiness claim"
+  ]
+}

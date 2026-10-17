@@ -1,0 +1,45 @@
+{
+  "scope": "Offline mocked Groq SSE with real native ingestion and hybrid retrieval; NOT LLM answer accuracy",
+  "documents": 3,
+  "pages": 18,
+  "questions": 12,
+  "completed": 12,
+  "literal_oracle_facts_and_source_pages": 12,
+  "identical_original_prompts": 12,
+  "identical_original_citations": 12,
+  "provider": "httpx.MockTransport, dummy key, no Groq network calls",
+  "actual_groq_tokens": null,
+  "reserved_tokens_upper_bound": 418379,
+  "default_account_budget_would_fit_prefix": 3,
+  "worker_peak_rss_bytes": 435937280,
+  "host_driver_peak_rss_bytes": 166313984,
+  "first_token_seconds": {
+    "first": 6.1399999998975545,
+    "median": 6.155999999959022
+  },
+  "completion_seconds": {
+    "first": 6.280999999959022,
+    "median": 6.320000000065193
+  },
+  "runtime": {
+    "platform": "Windows x64",
+    "python": "3.12.4",
+    "numpy": "2.4.6",
+    "faiss-cpu": "1.12.0",
+    "fastembed": "0.9.0",
+    "onnxruntime": "1.31.0",
+    "tokenizers": "0.23.3",
+    "httpx": "0.28.1"
+  },
+  "limitations": [
+    "Known-answer fixtures are supplied by the test oracle, not an AI model",
+    "Original formatter and prompt bodies execute against the same verified context and fixture answers",
+    "Evaluation-only token reservation limits raised for twelve OFFLINE questions; application defaults unchanged",
+    "Reservations are conservative UTF-8/framing/output upper bounds, not measured provider token consumption",
+    "First reranker initialization uses cached public weights; embeddings warm from indexing; no cold download",
+    "Host driver and model worker peaks are separate lifetime peaks, not simultaneous total Streamlit memory",
+    "Linux, live OAuth/browser sessions, live Groq latency and semantic answer quality remain unverified"
+  ],
+  "reproduce": "python -B -m session_cloud.evaluate_generation --reference ORIGINAL_DOCKER_SOURCE --model-cache PUBLIC_MINILM_CACHE --output NEW_EMPTY_OUTPUT_DIRECTORY",
+  "full_raw_report": "C:/Users/rudra/Documents/Codex/documind-phase2c2-test-runtime/evaluation/generation-report.json"
+}

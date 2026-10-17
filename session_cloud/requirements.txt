@@ -1,0 +1,16 @@
+# Separate candidate environment, Python 3.12, CPU-only wheels. No torch,
+# sentence-transformers package, remote vector stores, Redis or Celery.
+streamlit==1.54.0
+httpx==0.28.1
+requests==2.34.2
+pymupdf==1.26.7
+numpy==2.4.6
+faiss-cpu==1.12.0
+rank-bm25==0.2.2
+fastembed==0.9.0
+tokenizers==0.23.3
+onnxruntime==1.31.0
+mistune==3.1.4
+# Match the Docker native retrieval lock; Arrow 26 requires NumPy 2.x.
+pyarrow==26.0.0
+protobuf==5.29.5

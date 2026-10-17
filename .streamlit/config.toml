@@ -1,7 +1,7 @@
-# In the SEPARATE deployment repository, copy this to .streamlit/config.toml.
-# Kept here so existing local/Docker Streamlit configuration is not changed.
+# Preview feature branch only. The live app continues using main's 2 MB config.
+# Acceptance is not a guarantee that a 100 MB PDF passes processing limits.
 [server]
-maxUploadSize = 2
+maxUploadSize = 100
 maxMessageSize = 10
 enableCORS = true
 enableXsrfProtection = true

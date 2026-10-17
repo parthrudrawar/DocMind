@@ -1,0 +1,45 @@
+{
+  "scope": "One-page synthetic native PDF; real parsing/chunking/MiniLM/FAISS/BM25/RRF/reranking; MOCKED Groq SSE guide and brief",
+  "real_groq_requests": 0,
+  "actual_provider_tokens": null,
+  "guide": {
+    "wall_seconds": 1.7340000001713634,
+    "provider_calls": 1,
+    "reserved_token_upper_bound": 1413,
+    "evidence_wall_seconds": 0.3119999999180436,
+    "evidence_cpu_seconds": 0.28125,
+    "actual_context_minilm_tokens": 89,
+    "cached_weight_reranker_initialization_seconds": 0.8599999998696148
+  },
+  "brief": {
+    "wall_seconds": 0.8590000001713634,
+    "provider_calls": 1,
+    "reserved_token_upper_bound": 1231,
+    "evidence_wall_seconds": 0.34300000010989606,
+    "evidence_cpu_seconds": 0.25,
+    "actual_context_minilm_tokens": 89
+  },
+  "native_worker_lifetime_peak_rss_bytes": 369315840,
+  "runtime": {
+    "platform": "Windows x64",
+    "python": "3.12.4",
+    "numpy": "2.4.6",
+    "faiss-cpu": "1.12.0",
+    "fastembed": "0.9.0",
+    "onnxruntime": "1.31.0",
+    "tokenizers": "0.23.3"
+  },
+  "reference_comparisons": [
+    "Original worker Source Guide prompt AST evaluated against same long L1 excerpt",
+    "Original brief SQL-loop body evaluated with owned fixture rows and source guides",
+    "Original brief prompt AST, provider parameters and sidebar HTML compared directly",
+    "Original Source Guide fenced JSON and output fields preserved for valid fixtures"
+  ],
+  "limitations": [
+    "Fixed test completions are not evidence of real AI summary correctness or claim grounding",
+    "First analysis has warm embeddings and cached public reranker weights; no network cold download",
+    "Worker RSS is a lifetime peak, not total Streamlit app or cloud-host memory",
+    "Token figures are pessimistic reservations, not measured Groq usage",
+    "No Linux, real OAuth/browser, large-PDF or production readiness claim"
+  ]
+}
