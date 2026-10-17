@@ -121,3 +121,4 @@ docker-compose*.yaml
 !/tests/test_comparisons.py
 !/tests/test_exploration.py
 !/tests/test_preview_deployment.py
+!/tests/test_ux_integration.py

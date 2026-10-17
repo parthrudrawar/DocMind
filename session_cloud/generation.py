@@ -11,7 +11,9 @@ from app.reasoning.citations import citation_numbers
 from app.reasoning.prompt_safety import UNTRUSTED_DOCUMENT_POLICY
 from session_cloud.attribution import AttributionError, format_attribution
 from session_cloud.chat_state import merge_activity_event
-from session_cloud.generation_budget import GenerationLimits, ProviderBudget
+from session_cloud.generation_budget import GenerationLimits, ProviderBudget, prompt_token_bound
+from session_cloud.context_packing import pack_passages
+from session_cloud.index_contract import IndexFailure
 from session_cloud.groq_stream import string_array
 from session_cloud.original_context import RetrievedChunk
 from session_cloud.original_prompts import (_messages_for_state, _needs_decomposition,
@@ -253,6 +255,16 @@ class GenerationService:
                     conversation.extend({"role": m["role"], "content": m["content"]} for m in history[i:i + 2])
             state = {"user_query": question, "conversation_history": conversation,
                      "aggregated_evidence": context["aggregated_evidence"], "retrieved_chunks": chunks}
+            if prompt_token_bound(_messages_for_state(state)) > self.limits.input_bound:
+                available = self.limits.input_bound - prompt_token_bound(
+                    _messages_for_state({**state, 'aggregated_evidence': ''})) - 256
+                try:
+                    chunks, packed, metrics = pack_passages(chunks, chunks, count_tokens=lambda _: 0,
+                                                           byte_limit=max(0, available))
+                except IndexFailure:
+                    raise SessionError('generation_context') from None
+                state.update(aggregated_evidence=packed['aggregated_evidence'], retrieved_chunks=chunks)
+                context['metrics']['prompt_packing'] = metrics
             stage("generating", "active")
             answer = call(_messages_for_state(state), self.limits.answer_tokens, "answer", incremental=True)
             stage("generating", "complete")

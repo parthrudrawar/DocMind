@@ -3,10 +3,9 @@ from html import escape
 
 import streamlit as st
 
-from authenticated_cloud.auth import CloudError
-from session_cloud.analysis_view import provenance, queue_analysis
-from session_cloud.chat_state import enqueue_turn
+from session_cloud.analysis_view import provenance, queue_analysis, run_pending_analysis
 from session_cloud.chat_view import render_question_card_html
+from session_cloud.inline_answers import render_inline_answer
 
 TYPE_META = {"pattern": ("🔄", "#6C63FF"), "trend": ("📈", "#4ADE80"), "anomaly": ("⚠️", "#FC8181")}
 IMPORTANCE_COLORS = {"high": "#FC8181", "medium": "#FBBF24", "low": "#4A5568"}
@@ -47,31 +46,16 @@ def timeline_card(event):
 
 
 def apply_question_action(store, capability, ref, chat, state):
-    action = state.pop("analysis_ask", None)
-    if not action or (action.get("workspace"), action.get("chat")) != (ref, chat):
-        return
-    if state.get("pending_turn") or state.get("pending_analysis"):
-        return
-    try:
-        question, documents = store.question_for_ask(capability, ref, action.get("topic"), action.get("id"))
-    except CloudError as error:
-        if error.code in {"expired", "login"}:
-            raise
-        state["analysis_notice"] = str(error)
-        return
-    if enqueue_turn(state, question):
-        # Before the multiselect is instantiated. Original Ask queries the whole
-        # project, not the current Chat document filter.
-        state["pending_turn"]["document_ids"] = documents
-        state["selection_" + ref + "_" + chat] = documents
+    """Discard old navigation intents; Ask now stays within its question card."""
+    state.pop('analysis_ask', None)
 
 
 def render_exploration(store, capability, ref, chat, documents, kind, *, busy=False):
-    titles = {"questions": "### 💡 Smart Question Generator", "insights": "### 🔮 Proactive Insight Engine",
-              "timeline": "### 📅 Document Evolution Timeline"}
+    titles = {"questions": "### Smart Questions", "insights": "### Insights",
+              "timeline": "### Timeline"}
     actions = {"questions": "✨ Generate Smart Questions", "insights": "🔮 Mine Insights", "timeline": "📅 Build Timeline"}
     st.markdown(titles[kind])
-    st.caption("Uses ALL indexed workspace PDFs, independent of the Chat selection. Runs only when requested.")
+    st.caption('Explore ideas across all your indexed documents.')
     indexed = [d for d in documents if d["status"] == "indexed"]
     target = "collection"
     if kind in {"questions", "insights"}:
@@ -81,29 +65,27 @@ def render_exploration(store, capability, ref, chat, documents, kind, *, busy=Fa
         st.info("No indexed documents. Upload and index at least one PDF first.")
     if st.button(actions[kind], key="run_" + kind, disabled=not indexed or busy or store.analyses is None):
         queue_analysis(ref, kind, target)
+    run_pending_analysis(store, capability, ref, kind=kind, target=target)
     result = (store.get_questions(capability, ref, target) if kind == "questions" else
               store.get_insights(capability, ref, target) if kind == "insights" else store.get_timeline(capability, ref))
     if result is None:
-        st.info("Not generated for this topic and current index. Click the button above to run explicitly.")
+        st.info('Choose a topic or explore your whole collection to get started.')
         return
     if kind == "questions":
-        st.caption("Suggested questions from sampled document sections; answerability is a model instruction, not verified until the question is answered against source evidence.")
+        answers = store.question_answers(capability, ref, target)
         if target:
             st.text("Questions about: " + target)
         with st.container(key="documind_smart_questions"):
             for i, item in enumerate(result["items"], 1):
                 with st.container(key=f"documind_question_{i}"):
                     st.markdown(render_question_card_html(i, item["question"]), unsafe_allow_html=True)
-                    if st.button("Ask →", key="ask_" + item["id"], disabled=busy or store.generation is None):
-                        st.session_state.analysis_ask = {"workspace": ref, "chat": chat, "topic": target, "id": item["id"]}
-                        st.rerun()
-        st.caption("Ask queues a normal streaming answer over all indexed PDFs in Chat. Open the Chat tab to view it.")
+                    render_inline_answer(store, capability, ref, target, item['id'], answers, busy=busy)
     elif kind == "insights":
-        st.caption("Potential patterns, trends and anomalies from sampled sections. Named supporting documents are model-selected provenance, not verified claim-level citations.")
+        st.caption('Patterns and possibilities to explore—not verified conclusions.')
         for item in result["items"]:
             st.markdown(insight_card(item), unsafe_allow_html=True)
     else:
-        st.caption("Model-extracted claims and dates from a summary plus two paragraphs/document. The original prompt may use the upload year when publication dates are missing. Dates are not independently verified.")
+        st.caption('Suggested chronology. Dates may be inferred; check the sources.')
         current_year = None
         for item in result["items"]:
             if item["year"] != current_year:

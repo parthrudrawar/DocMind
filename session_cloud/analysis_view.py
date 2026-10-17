@@ -38,27 +38,40 @@ def brief_html(brief):
 
 def provenance(result):
     if result.get("input_sources"):
-        with st.expander("Input provenance", expanded=False):
-            st.caption("Original indexed excerpts supplied to this analysis. These are input provenance, not claim-level citations or proof of every generated claim.")
+        with st.expander("Source material", expanded=False):
+            st.caption('Excerpts used for this analysis—not claim-by-claim citations.')
             for source in result["input_sources"]:
                 st.markdown(render_source_card_html(source), unsafe_allow_html=True)
 
 
 def queue_analysis(ref, kind, target):
-    if st.session_state.get("pending_analysis") or st.session_state.get("pending_turn"):
+    if any(st.session_state.get(k) for k in ('pending_analysis', 'pending_turn', 'pending_inline')):
         return
     st.session_state.pending_analysis = {"workspace": ref, "kind": kind, "target": target,
                                          "id": str(uuid4()), "status": "queued"}
     st.rerun()
 
 
-def run_pending_analysis(store, capability, ref):
+def run_pending_analysis(store, capability, ref, *, kind=None, target=None):
     pending = st.session_state.get("pending_analysis")
+    feedback = st.session_state.get('analysis_feedback', {})
+    if feedback.get('workspace') == ref and feedback.get('kind') == kind and feedback.get('target') == target:
+        st.warning(SessionError.MESSAGES.get(feedback['code'], SessionError.MESSAGES['analysis_invalid']))
+        if st.button('Retry analysis', key='retry_analysis_' + kind + '_' + str(target)):
+            st.session_state.pop('analysis_feedback', None)
+            queue_analysis(ref, kind, target)
     if not pending:
         return
     if pending.get("workspace") != ref:
         st.session_state.pop("pending_analysis", None)
         return
+    if kind is not None and pending['kind'] != kind:
+        return
+    if target is not None and pending['target'] != target:
+        if store.analyses:
+            store.analyses.cancel(capability, ref, pending['kind'], pending['id'])
+        st.session_state.pop('pending_analysis', None)
+        st.rerun()
     events = None
     try:
         if store.analyses is None:
@@ -87,13 +100,13 @@ def run_pending_analysis(store, capability, ref):
                     done = True
             if not done or not completed:
                 raise SessionError("generation_incomplete")
-        st.session_state.analysis_notice = "Analysis completed. Only its current, workspace-authorized result is shown."
+        st.session_state.pop('analysis_feedback', None)
     except CloudError as error:
         if error.code in {"expired", "login"}:
             raise
-        st.session_state.analysis_notice = str(error)
+        st.session_state.analysis_feedback = dict(workspace=ref, kind=pending['kind'], target=pending['target'], code=error.code)
     except Exception:
-        st.session_state.analysis_notice = SessionError.MESSAGES["analysis_invalid"]
+        st.session_state.analysis_feedback = dict(workspace=ref, kind=pending['kind'], target=pending['target'], code='analysis_invalid')
     finally:
         if events is not None:
             events.close()

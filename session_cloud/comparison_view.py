@@ -4,7 +4,7 @@ import re
 
 import streamlit as st
 
-from session_cloud.analysis_view import provenance, queue_analysis
+from session_cloud.analysis_view import provenance, queue_analysis, run_pending_analysis
 
 
 def topic_label(text):
@@ -28,27 +28,27 @@ def gap_card(item, number):
 
 def render_comparisons(store, capability, ref, documents, kind, *, busy=False):
     contradictions = kind == "contradictions"
-    st.markdown("### ⚡ Contradiction Detector" if contradictions else "### 🔍 Knowledge Gap Finder")
-    st.caption("Uses ALL indexed workspace PDFs, independent of the chat document selection. Analysis runs only when you click below.")
+    st.markdown("### Contradictions" if contradictions else "### Knowledge Gaps")
+    st.caption('Compare evidence across your indexed documents.')
     indexed = [d for d in documents if d["status"] == "indexed"]
     enough = len({d["filename"] for d in indexed}) >= 2 if contradictions else bool(indexed)
     if not enough:
         st.info("Need at least 2 different PDFs. Upload and index them first." if contradictions
                 else "No indexed documents. Upload and index at least 1 PDF first.")
-    st.caption("Compares the first five paragraph excerpts (300 characters each) per document pair. Different wording, scope or missing information alone are not contradictions. The model signal is not a calibrated probability."
-               if contradictions else
-               "Reviews the first 1,500 characters of each document summary (or first three paragraphs if no summary exists). Suggested research gaps are not proof of absence in full PDFs, unsupported-claim verdicts, or retrieval-failure diagnoses.")
+    with st.expander('About this analysis'):
+        st.caption('Uses sampled excerpts, not every page. Different wording or missing information alone is not a contradiction. Signals are not probabilities. Suggested gaps are not proof of absence.')
     if st.button("🔄 Re-scan Contradictions" if contradictions else "🔄 Re-analyse Gaps",
                  key="run_contra" if contradictions else "run_gaps", disabled=not enough or busy or store.analyses is None):
         queue_analysis(ref, kind, "collection")
+    run_pending_analysis(store, capability, ref, kind=kind, target='collection')
     result = (store.get_contradictions(capability, ref) if contradictions else store.get_gaps(capability, ref))
     if result is None:
-        st.info("Not analysed for the current index. Run a scan explicitly; no findings have been established.")
+        st.info('Run an analysis to explore your collection.')
         return
     items = result["items"]
     if not items:
-        st.info("Scan completed: no contradictions passed the original 0.4 model-signal threshold in these sampled excerpts. This does not establish that the full documents are consistent."
-                if contradictions else "Review completed: no potential gaps were suggested from the sampled overview. Full-document coverage is not established.")
+        st.info('No potential conflicts found in the sampled evidence. This is not a full-document audit.'
+                if contradictions else 'No potential gaps found in the sampled overview. Other gaps may still exist.')
     elif contradictions:
         st.caption(f"Found {len(items)} potential contradiction(s). Review the source evidence before relying on these findings.")
         for item in items:

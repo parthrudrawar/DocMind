@@ -250,7 +250,10 @@ def test_ask_uses_canonical_current_question_and_all_documents(exploration_env):
     result = run(e, "questions")
     state = {"messages": [], "analysis_ask": {"workspace": e.refs[A], "chat": "chat", "topic": "", "id": result["items"][0]["id"]}}
     apply_question_action(e.store, A, e.refs[A], "chat", state)
-    assert state["pending_turn"]["question"] == QUESTIONS[0] and state["pending_turn"]["document_ids"] == e.docs[A]
+    assert 'pending_turn' not in state and state['messages'] == []
+    thread = e.store.question_thread(A, e.refs[A], '', result['items'][0]['id'], create=True)
+    assert thread['question'] == QUESTIONS[0] and thread['documents'] == e.docs[A]
+    assert thread['chat'] not in e.store.chats(A, e.refs[A])
     assert len(e.requests) == 1
     with pytest.raises(SessionError):
         e.store.question_for_ask(B, e.refs[B], "", result["items"][0]["id"])

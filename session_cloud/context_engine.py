@@ -10,7 +10,7 @@ from session_cloud.bounded_pdf import peak_rss_bytes
 from session_cloud.index_contract import IndexFailure
 from session_cloud.index_engine import load, search
 from session_cloud.original_context import assemble_context, expand_context
-from session_cloud.original_prompts import aggregator_node
+from session_cloud.context_packing import pack_passages
 
 
 def rows_for(chunks, selected):
@@ -79,7 +79,8 @@ def prepare_context(folder, checksum, query, selected, sub_questions, model, rer
         progress("evidence", "active")
     chosen = sorted(seen.values(), key=lambda c: c.score, reverse=True)[:min(top_k, 20)]
     expanded = expand_context(chosen, rows, neighbor_window=1, include_parents=True, token_budget=4500)
-    state = aggregator_node({"user_query": query, "retrieved_chunks": expanded})
+    expanded, state, packing = pack_passages(chosen, expanded,
+        count_tokens=lambda text: actual_token_count(model, text))
     actual = validate_context(state, model)
     if any(c.doc_id not in selected for c in expanded):
         raise IndexFailure("context_invalid")
@@ -89,7 +90,8 @@ def prepare_context(folder, checksum, query, selected, sub_questions, model, rer
             "aggregated_evidence": state["aggregated_evidence"], "sub_questions": list(sub_questions),
             "retrieval_details": per_question,
             "metrics": {"wall_seconds": time.monotonic() - started, "cpu_seconds": time.process_time() - cpu,
-                        "peak_rss_bytes": peak_rss_bytes(), "actual_context_tokens": actual}}
+                        "peak_rss_bytes": peak_rss_bytes(), "actual_context_tokens": actual,
+                        "context_packing": packing}}
     if include_summaries:
         # The original guide uses level=1, NOT a generic summary of retrieved
         # children. Read the already hash-verified, selected-owned L1 rows.

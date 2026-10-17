@@ -276,8 +276,8 @@ def test_reranked_evidence_preview_ui_does_not_enable_generation_or_share_source
     prepared(store, A, chunk().text)
     monkeypatch.setattr(ui, "_fixture_store", store, raising=False)
     a = AppTest.from_string(f"from session_cloud import streamlit_app as ui\nui.render_workspace(ui._fixture_store, '{A}')").run(timeout=30)
-    a.checkbox[0].set_value(True)
-    a.text_input[0].input("Amber solar capacity")
+    a.checkbox(key='source_search_context').set_value(True)
+    a.text_input(key='source_search_query').input("Amber solar capacity")
     next(button for button in a.button if button.label == "Search documents").click()
     a.run(timeout=30)
     assert not a.exception and a.chat_input[0].disabled

@@ -543,4 +543,57 @@ div[data-testid="stHorizontalBlock"] .stButton > button:hover {
     .assistant-bubble td { min-width: 92px; padding: 6px 7px; }
     .inline-citation-popover { width: min(300px, 72vw); }
 }
+/* Preview polish: supported keyed containers and semantic test-id selectors.
+   Native sidebar and conversation scrolling are retained; no DOM scripts. */
+[data-testid="stMainBlockContainer"] { max-width: 100%; padding: 1rem 2rem 1.25rem; }
+.sidebar-brand { color:#e2e8f0; font-size:1.65rem; font-weight:800; letter-spacing:-.05em; }
+.app-header { font-size:2rem; line-height:1.2; letter-spacing:-.05em; }
+.st-key-documind_app_header { background:#0e1117; padding:.5rem 0; }
+[data-testid="stLayoutWrapper"]:has(> .st-key-documind_app_header) {
+    position:sticky; top:2.8rem; z-index:15; background:#0e1117;
+}
+[data-testid="stTabs"] [role="tablist"] {
+    position:sticky; top:9rem; z-index:12; background:#0e1117;
+    gap:.4rem; border-bottom:1px solid #273247; overflow-x:auto;
+}
+[role="tab"] { font-size:.95rem; min-height:44px; padding:.5rem .8rem; white-space:nowrap; }
+button:focus-visible, [role="tab"]:focus-visible { outline:2px solid #a5b4fc; outline-offset:3px; }
+.st-key-documind_chat_panel {
+    display:flex !important; flex-direction:column; height:auto !important;
+    gap:.75rem !important; width:100%; min-width:0;
+}
+.st-key-documind_chat_panel > [data-testid="stLayoutWrapper"] { height:auto !important; overflow:visible; }
+.st-key-documind_chat_panel > [data-testid="stLayoutWrapper"]:has(> .st-key-documind_chat_viewport) {
+    height:auto !important; overflow:visible;
+}
+.st-key-documind_chat_viewport {
+    height:clamp(240px, calc(100dvh - 290px), 900px) !important;
+    max-height:calc(100dvh - 230px); min-height:220px; padding:.5rem .5rem .75rem 0;
+}
+.st-key-documind_chat_composer { position:sticky; bottom:0; background:#0e1117; padding:.6rem 0; }
+.chat-panel-header { padding:0 0 .5rem; }
+.chat-panel-title { font-size:1.1rem; }
+.assistant-bubble { max-width:100%; width:100%; box-sizing:border-box; font-size:1rem; line-height:1.75; padding:1rem 1.2rem; }
+.user-bubble { font-size:1rem; line-height:1.65; }
+.assistant-bubble, .user-bubble { animation:none; overflow-wrap:anywhere; }
+.empty-state { color:#94a3b8; padding:3rem 1rem; }
+.citation-card { border-radius:12px; padding:1rem; line-height:1.65; }
+.citation-meta, .citation-full-text, .citation-text { color:#94a3b8; }
+.citation-title { font-size:.95rem; }
+.inline-citation-label { font-size:.8rem; padding:2px 6px; }
+.smart-question-card { min-height:110px; padding:1.25rem 1.4rem; border-radius:14px; }
+.smart-question-text { color:#e2e8f0; font-size:1.05rem; line-height:1.7; }
+.st-key-documind_collection_brief { padding:1rem; border-radius:14px; }
+.analysis-result > div > div:last-child { font-size:1rem !important; line-height:1.8 !important; color:#cbd5e1 !important; }
+.analysis-result > div { font-size:1rem !important; line-height:1.7 !important; }
+@media (max-width:700px) {
+    [data-testid="stMainBlockContainer"] { padding:.5rem .75rem 1rem; }
+    .app-header { font-size:1.65rem; }
+    [data-testid="stTabs"] [role="tablist"] { top:10rem; }
+    [role="tab"] { padding:.45rem .6rem; font-size:.85rem; }
+    .st-key-documind_chat_viewport { height:clamp(220px, calc(100dvh - 330px), 600px) !important; }
+    .assistant-bubble { padding:.8rem; max-width:100%; }
+    .smart-question-card { padding:1rem; }
+    .inline-citation-popover { max-width:75vw; }
+}
 </style>"""

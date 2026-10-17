@@ -19,6 +19,8 @@ from pathlib import Path
 from authenticated_cloud.auth import CloudError, digest
 from session_cloud.index_workspace import IndexedWorkspace
 from session_cloud.analysis_workspace import AnalysisWorkspace
+from session_cloud.upload_workflow import UploadWorkflow
+from session_cloud.question_answers import QuestionAnswers
 
 
 class SessionError(CloudError):
@@ -62,6 +64,8 @@ class SessionError(CloudError):
         "analysis_evidence": "The required indexed evidence is unavailable. Index the PDFs completely and retry explicitly; this is not a finding of no contradictions or gaps.",
         "analysis_input": "Generate a source guide first, or use a document with enough indexed summary text. No analysis request was sent.",
         "analysis_stale": "The analysis inputs changed. Generate a new result explicitly; outdated results are not shown.",
+        "upload_interrupted": "PDF processing was interrupted. Retry to finish; no incomplete index is searchable.",
+        "inline_limit": "The inline answer allowance is full. Generate a new set of Smart Questions or continue in Chat.",
     }
 
 
@@ -89,7 +93,7 @@ class Lease:
     expires: float
 
 
-class WorkspaceStore(IndexedWorkspace, AnalysisWorkspace):
+class WorkspaceStore(UploadWorkflow, QuestionAnswers, IndexedWorkspace, AnalysisWorkspace):
     """Opaque auth capabilities resolve to server-owned, per-session SQLite/files.
 
     AuthBroker revalidates Supabase on every public data operation. Only hashes of
@@ -111,6 +115,7 @@ class WorkspaceStore(IndexedWorkspace, AnalysisWorkspace):
         (self.root / ".instance").write_text(self._marker, encoding="ascii")
         self._lock, self._work = threading.RLock(), threading.Lock()
         self._leases, self._retired, self._known, self._active = {}, {}, set(), set()
+        self._ingestions = {}
         self._day, self._uploads, self._user_uploads = int(clock() // 86400), 0, {}
         self._preparations, self._user_preparations = 0, {}
         self._indexing, self._user_indexing, self._queries, self._user_queries = 0, {}, 0, {}
@@ -166,6 +171,7 @@ class WorkspaceStore(IndexedWorkspace, AnalysisWorkspace):
             if folder.exists():
                 shutil.rmtree(folder)
             self._known.remove(ref)
+            self._ingestions = {key: value for key, value in self._ingestions.items() if key[0] != ref}
         if int(now // 86400) != self._day:
             self._day, self._uploads, self._user_uploads = int(now // 86400), 0, {}
             self._preparations, self._user_preparations = 0, {}
@@ -425,7 +431,7 @@ class WorkspaceStore(IndexedWorkspace, AnalysisWorkspace):
         with self._lock:
             lease = self.check(capability, ref)
             with self._db(lease) as db:
-                if db.execute("SELECT count(*) FROM chats").fetchone()[0] >= self.limits.chats:
+                if db.execute("SELECT count(*) FROM chats WHERE id NOT LIKE 'question-%'").fetchone()[0] >= self.limits.chats:
                     raise SessionError("history")
                 chat = secrets.token_hex(16)
                 db.execute("INSERT INTO chats VALUES(?)", (chat,))
@@ -436,7 +442,7 @@ class WorkspaceStore(IndexedWorkspace, AnalysisWorkspace):
         with self._lock:
             lease = self.check(capability, ref)
             with self._db(lease) as db:
-                return [row[0] for row in db.execute("SELECT id FROM chats ORDER BY rowid")]
+                return [row[0] for row in db.execute("SELECT id FROM chats WHERE id NOT LIKE 'question-%' ORDER BY rowid")]
 
     def history(self, capability, ref, chat):
         with self._lock:

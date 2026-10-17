@@ -73,6 +73,7 @@ class IndexedWorkspace:
                         db.execute("INSERT OR REPLACE INTO active_index VALUES(1,?,?)", (destination.name, result["checksum"]))
                         db.execute("UPDATE documents SET status='indexed' WHERE id=?", (doc_id,))
                         db.execute("DELETE FROM analysis_results")
+                        self._clear_question_answers(db)
                     committed = True
                 return {"status": "indexed", **result}
             except IndexFailure as error:
@@ -196,6 +197,8 @@ class IndexedWorkspace:
                         destination = None
                 db.execute("DELETE FROM documents WHERE id=?", (doc_id,))
                 db.execute("DELETE FROM analysis_results")
+                self._clear_question_answers(db)
+                self._ingestions.pop((ref, doc_id), None)
                 db.commit()
                 committed = True
                 (self._folder(ref) / (doc_id + ".pdf")).unlink(missing_ok=True)

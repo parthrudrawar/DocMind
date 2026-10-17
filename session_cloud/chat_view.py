@@ -47,7 +47,7 @@ def _activity_detail(row: dict) -> str:
     return " · ".join(details)
 
 
-def _render_completed_message(index: int, message: dict) -> None:
+def _render_completed_message(index: int, message: dict, *, allow_followups=True) -> None:
     metadata = message.get("meta", {})
     citations = normalize_citations(metadata.get("citations", []))
     answer_html = render_answer_html(message.get("content", ""), citations)
@@ -55,6 +55,10 @@ def _render_completed_message(index: int, message: dict) -> None:
         f'<div class="assistant-bubble">{answer_html}</div>',
         unsafe_allow_html=True,
     )
+    evidence_metrics = metadata.get('metrics', {}).get('evidence', {})
+    if any(evidence_metrics.get(key, {}).get('packed')
+           for key in ('context_packing', 'prompt_packing')):
+        st.caption('Answered from selected complete passages. Additional context was omitted to fit the answer budget.')
 
     evidence = metadata.get("evidence_strength") or {}
     if not evidence and citations:
@@ -110,7 +114,7 @@ def _render_completed_message(index: int, message: dict) -> None:
             st.rerun()
 
     follow_ups = metadata.get("follow_up_questions", [])
-    if follow_ups:
+    if follow_ups and allow_followups:
         st.caption("Follow-up suggestions")
         columns = st.columns(len(follow_ups))
         for suggestion_index, (column, suggestion) in enumerate(
@@ -140,10 +144,10 @@ def _render_history() -> tuple[object | None, object | None]:
                 """
                 <div class="empty-state">
                     <div class="empty-icon">🧠</div>
-                    <h3 style="color:#3D4A62;margin:12px 0 6px">DocuMind is ready</h3>
-                    <p style="color:#2D3748;font-size:0.85rem">
-                        Upload PDFs in the sidebar, then ask anything.<br>
-                        Answers include exact page citations.
+                    <h3 style="color:#e2e8f0;margin:12px 0 6px">What would you like to discover?</h3>
+                    <p style="color:#94a3b8;font-size:1rem">
+                        Add a PDF to get started, then ask a question.<br>
+                        Explore answers with supporting sources.
                     </p>
                 </div>
                 """,

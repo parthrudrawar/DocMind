@@ -199,6 +199,8 @@ class AnalysisService(GenerationService):
                         # A regenerated guide changes the original brief inputs,
                         # even when the underlying index did not change.
                         db.execute("DELETE FROM analysis_results WHERE kind='brief'")
+                    if kind == 'questions':
+                        self.store._clear_question_answers(db)
                     db.execute("INSERT OR REPLACE INTO analysis_results VALUES(?,?,?,?,?)",
                                (kind, target, state["revision"], state["fingerprint"], payload))
                     db.execute("UPDATE analysis_requests SET status='complete',payload=? WHERE id=? AND status='running'",
