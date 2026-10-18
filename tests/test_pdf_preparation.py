@@ -333,7 +333,9 @@ def test_prepared_not_searchable_in_two_independent_ui_sessions(environment, mon
     # Phase 2B must not advertise a merely prepared PDF as searchable.
     assert a.multiselect[0].options == [] and b.multiselect[0].options == []
     assert any(button.label == "Index PDF" for button in a.sidebar.button)
-    assert a.chat_input[0].disabled and b.chat_input[0].disabled
+    assert not a.chat_input[0].disabled and not b.chat_input[0].disabled
+    assert store.generation is None
+    assert store.history(A, ref, store.chats(A, ref)[0]) == []
 
 
 def test_failed_preparation_quota_survives_new_login_and_workspace(environment):

@@ -69,6 +69,7 @@ def render_workspace(store, capability):
         st.markdown('<div class="app-header">DocuMind</div>', unsafe_allow_html=True)
         st.caption(TAGLINE)
     busy = any(st.session_state.get(k) for k in ("pending_turn", "pending_analysis", "pending_inline"))
+    processing_action = None
     with st.sidebar:
         st.markdown('<div class="sidebar-brand">DocuMind</div>', unsafe_allow_html=True)
         with st.container(key="documind_sidebar_actions"):
@@ -90,13 +91,15 @@ def render_workspace(store, capability):
         st.caption("Add a PDF. We’ll get it ready automatically.")
         upload = st.file_uploader("Choose a PDF", type=["pdf"], max_upload_size=100,
                                   disabled=busy, key="temporary_upload_" + ref)
-        render_upload(store, capability, ref, upload, st.session_state, st)
+        # Reserve progress here, but do expensive work only after Chat and all
+        # navigation have rendered. Failures must not abort the main panel.
+        upload_slot = st.container()
         documents = store.documents(capability, ref)
         if not documents:
             st.caption("Your sources will appear here.")
         for doc in documents:
             with st.expander(doc["filename"]):
-                st.caption({"accepted": "Waiting to process", "prepared": "Ready to finish indexing",
+                st.caption({"accepted": "Not indexed yet", "prepared": "Processing incomplete — use Retry processing",
                             "indexed": "Ready to chat"}[doc["status"]])
                 if doc["status"] == "indexed":
                     guide = store.get_source_guide(capability, ref, doc["id"])
@@ -115,20 +118,20 @@ def render_workspace(store, capability):
                     st.rerun()
                 with st.expander("Advanced processing"):
                     if doc["status"] == "accepted" and st.button("Prepare PDF", disabled=busy, key="prepare_" + doc["id"]):
-                        with st.status("Reading pages and tables…"):
-                            store.prepare(capability, ref, doc["id"])
-                        st.rerun()
+                        processing_action = ("prepare", doc["id"])
                     if doc["status"] in {"prepared", "indexed"} and st.button(
                             "Reindex PDF" if doc["status"] == "indexed" else "Index PDF",
                             disabled=busy, key="index_" + doc["id"]):
-                        with st.status("Building searchable evidence…"):
-                            store.index_document(capability, ref, doc["id"])
-                        st.rerun()
+                        processing_action = ("index", doc["id"])
         ready = {d["id"]: d["filename"] for d in documents if d["status"] == "indexed"}
         selection_key = "selection_" + ref + "_" + chat
-        if selection_key in st.session_state:
-            st.session_state[selection_key] = [d for d in st.session_state[selection_key] if d in ready]
-        selection = st.multiselect("Chat sources", list(ready), default=list(ready),
+        previous_ready = st.session_state.get(selection_key + "_options", [])
+        selected = st.session_state.get(selection_key, list(ready))
+        selected = [d for d in selected if d in ready] + [
+            d for d in ready if d not in previous_ready and d not in selected]
+        st.session_state[selection_key] = selected
+        st.session_state[selection_key + "_options"] = list(ready)
+        selection = st.multiselect("Chat sources", list(ready),
                                    format_func=lambda key: ready[key], key=selection_key, disabled=busy)
         render_help()
     api = LocalAPI(store, capability, ref, chat, selection)
@@ -137,7 +140,9 @@ def render_workspace(store, capability):
         if store.generation is None:
             st.info("AI is unavailable. Please contact the demo owner.")
         render_chat_tab(api, enabled=store.generation is not None and bool(selection)
-                        and not st.session_state.get("pending_analysis") and not st.session_state.get("pending_inline"))
+                        and not st.session_state.get("pending_analysis") and not st.session_state.get("pending_inline"),
+                        unavailable_message=("Upload a PDF in the sidebar. It will be indexed automatically before you can ask about it."
+                                             if not ready else "Select a ready PDF, or wait for the current operation to finish."))
     with panels[1]:
         st.subheader("Your collection")
         st.caption("Explore all your indexed documents together.")
@@ -176,6 +181,20 @@ def render_workspace(store, capability):
                     st.text(hit["text"])
         elif submitted:
             st.info('Enter a few words to search your sources.')
+    with upload_slot:
+        if processing_action:
+            try:
+                with st.status("Processing PDF…", expanded=False) as status:
+                    method = store.prepare if processing_action[0] == "prepare" else store.index_document
+                    method(capability, ref, processing_action[1])
+                    status.update(label="PDF processing complete", state="complete")
+                st.rerun()
+            except CloudError as error:
+                if error.code in {"expired", "login"}:
+                    raise
+                status.update(label=str(error), state="error", expanded=False)
+        else:
+            render_upload(store, capability, ref, upload, st.session_state, st)
 
 
 def main():

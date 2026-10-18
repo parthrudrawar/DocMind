@@ -519,7 +519,8 @@ def test_upload_ui_identity_skips_reruns_and_keeps_failures_actionable(
 
     @contextmanager
     def status(*args, **kwargs):
-        yield SimpleNamespace(update=lambda **kw: None)
+        messages.append(args[0])
+        yield SimpleNamespace(update=lambda **kw: messages.append(kw.get("label")))
 
     def ingest(*args, **kwargs):
         calls.append(kwargs.get("retry"))
@@ -531,6 +532,7 @@ def test_upload_ui_identity_skips_reruns_and_keeps_failures_actionable(
         warning=messages.append,
         success=messages.append,
         button=lambda *a, **kw: False,
+        rerun=lambda: None,
     )
     for _ in range(3):
         render_upload(store, A, ref, upload, state, ui)

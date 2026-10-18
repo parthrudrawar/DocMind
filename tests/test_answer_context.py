@@ -280,9 +280,13 @@ def test_reranked_evidence_preview_ui_does_not_enable_generation_or_share_source
     a.text_input(key='source_search_query').input("Amber solar capacity")
     next(button for button in a.button if button.label == "Search documents").click()
     a.run(timeout=30)
-    assert not a.exception and a.chat_input[0].disabled
+    assert not a.exception and not a.chat_input[0].disabled
     assert any("twelve megawatts" in item.value for item in a.text)
     assert len(a.tabs) == 7
+    a.chat_input[0].set_value("What is Amber's capacity?").run(timeout=30)
+    ref = store.open(A)
+    assert store.generation is None
+    assert store.history(A, ref, store.chats(A, ref)[0]) == []
     b = AppTest.from_string(f"from session_cloud import streamlit_app as ui\nui.render_workspace(ui._fixture_store, '{B}')").run(timeout=30)
     assert not b.exception and b.multiselect[0].options == []
     assert all("twelve megawatts" not in item.value for item in b.text)

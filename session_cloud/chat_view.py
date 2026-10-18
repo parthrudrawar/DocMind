@@ -268,7 +268,7 @@ def _run_pending_turn(api, processing_slot, streaming_slot) -> None:
     st.rerun()
 
 
-def render_chat_tab(api, *, enabled=True) -> None:
+def render_chat_tab(api, *, enabled=True, unavailable_message="Upload and select a PDF to start chatting.") -> None:
     """Render stable history, composer, and pending output in that visual order."""
     prefill = st.session_state.pop("pending_input", "")
     pending = st.session_state.get("pending_turn")
@@ -285,6 +285,8 @@ def render_chat_tab(api, *, enabled=True) -> None:
             )
         processing_slot, streaming_slot = _render_history()
         with st.container(key="documind_chat_composer"):
+            if not enabled:
+                st.caption(unavailable_message)
             if pending and st.button("Cancel response", key="cancel_response"):
                 api.cancel(pending["turn_id"])
                 st.session_state.failed_turn = {"code": "generation_interrupted", "question": pending["question"]}
@@ -293,10 +295,12 @@ def render_chat_tab(api, *, enabled=True) -> None:
                 st.rerun()
             user_input = st.chat_input(
                 "Ask anything about your documents…",
-                disabled=bool(pending) or not enabled,
+                disabled=bool(pending),
                 key="documind_chat_input",
             )
     question = user_input or prefill
+    if question and not enabled:
+        st.info(unavailable_message)
     if enabled and question and not pending and enqueue_turn(st.session_state, question):
         st.session_state["pending_turn"]["document_ids"] = list(api.selected)
         st.rerun()

@@ -1,5 +1,6 @@
 """Bounded, serialized supervisor; model weights shared only within this store."""
 import atexit
+import errno
 from dataclasses import asdict
 import json
 import logging
@@ -11,7 +12,7 @@ import sys
 import threading
 import time
 
-from session_cloud.index_contract import IndexFailure
+from session_cloud.index_contract import IndexFailure, safe_diagnostic
 from session_cloud.disk_usage import model_cache_bytes
 from session_cloud.process_limits import memory_guard
 
@@ -71,9 +72,11 @@ class IndexService:
 
     def run(self, request, folder, limits, active, on_stage=None):
         if not self.lock.acquire(blocking=False):
-            raise IndexFailure("index_resource")
+            logger.warning("documind_index stage=authorization reason=concurrent_request code=index_busy")
+            raise IndexFailure("index_busy", reason="concurrent_request")
         source, output = Path(folder) / "index-request.json", Path(folder) / "index-response.json"
         emitted = 0
+        started, rss, diagnostic = time.monotonic(), None, {}
 
         def report_progress():
             nonlocal emitted
@@ -93,27 +96,38 @@ class IndexService:
                 on_stage(event)
                 emitted += 1
         stage = "authorization"
+
+        def check_caches():
+            nonlocal stage
+            stage = "model_cache_accounting"
+            if any(model_cache_bytes(cache) > 160 * 1024**2 for cache in (self.cache, self.reranker_cache)):
+                stage = "model_cache_capacity"
+                raise IndexFailure("index_resource", reason="model_cache_capacity")
+
         try:
+            stage = "workspace_accounting"
             active()
+            stage = "request_encoding"
             request = {**request, "limits": asdict(limits)}
             data = json.dumps(request, ensure_ascii=False)
             if len(data.encode()) > 12 * 1024 * 1024:
-                raise IndexFailure("index_resource")
+                raise IndexFailure("index_resource", reason="request_capacity")
             source.write_text(data, encoding="utf-8")
             stage = "worker_start"
             self._start(limits)
             self.process.stdin.write((json.dumps({"input": str(source), "output": str(output)}) + "\n").encode())
             self.process.stdin.flush()
-            started = time.monotonic()
             stage = "worker_request"
             while not output.exists():
+                stage = "workspace_accounting"
                 active()
+                stage = "worker_request"
                 report_progress()
                 if self.process.poll() is not None:
                     stage = "worker_exit"
-                    raise IndexFailure("index_resource")
+                    raise IndexFailure("index_resource", reason="worker_exit")
                 if time.monotonic() - started > limits.seconds:
-                    raise IndexFailure("index_time")
+                    raise IndexFailure("index_time", reason="wall_deadline")
                 if os.name != "nt":
                     # Linux RLIMIT_RSS is not enforced. Monitor resident memory
                     # in addition to virtual-address/file caps inside the child.
@@ -121,30 +135,51 @@ class IndexService:
                     rss = next(int(s.split()[1]) * 1024 for s in status.splitlines() if s.startswith("VmRSS:"))
                     if rss > limits.memory_bytes:
                         stage = "resident_memory"
-                        raise IndexFailure("index_resource")
-                if any(model_cache_bytes(cache) > 160 * 1024**2 for cache in (self.cache, self.reranker_cache)):
-                    stage = "model_cache_capacity"
-                    raise IndexFailure("index_resource")
+                        raise IndexFailure("index_resource", reason="resident_memory")
+                check_caches()
                 time.sleep(0.05)
+            stage = "workspace_accounting"
             active()
+            # A fast worker can finish between samples. Verify the final cache
+            # size too; transient scan retries never waive publication budgets.
+            check_caches()
+            if time.monotonic() - started > limits.seconds:
+                raise IndexFailure("index_time", reason="wall_deadline")
             report_progress()
+            stage = "response_validation"
             if output.stat().st_size > 4 * 1024 * 1024:
-                raise IndexFailure("index_resource")
+                raise IndexFailure("index_resource", reason="response_capacity")
             result = json.loads(output.read_text(encoding="utf-8"))
+            if not isinstance(result, dict):
+                raise IndexFailure(reason="invalid_response")
             if "error" in result:
-                raise IndexFailure(result["error"])
+                diagnostic = safe_diagnostic(result.get("diagnostic"))
+                raise IndexFailure(result["error"], reason=diagnostic.get("reason", "guard"))
             return result
         except IndexFailure as error:
-            logger.warning("documind_index stage=%s reason=%s exit=%s", stage, error.code,
-                           self.process.poll() if self.process else None)
+            # A killed worker cannot return JSON. Its small sidecar records the
+            # last known phase without text, filenames or workspace identifiers.
+            last = output.with_suffix(".diagnostic")
+            if not diagnostic and last.is_file():
+                try:
+                    if last.stat().st_size <= 512:
+                        diagnostic = safe_diagnostic(json.loads(last.read_text(encoding="utf-8")))
+                except (OSError, ValueError):
+                    pass
+            logger.warning("documind_index stage=%s worker_stage=%s reason=%s code=%s exit=%s "
+                           "rss_bytes=%s memory_limit_bytes=%s elapsed_ms=%s native_code=%s",
+                           stage, diagnostic.get("stage", "unknown"), error.reason, error.code,
+                           self.process.poll() if self.process else None, rss, limits.memory_bytes,
+                           round((time.monotonic() - started) * 1000), diagnostic.get("native_code"))
             self.close()
             raise
         except (OSError, ValueError, StopIteration) as error:
             # Never interpolate exception text, requests, paths, headers or keys.
-            logger.warning("documind_index stage=%s reason=supervisor_io native_code=%s", stage,
-                           getattr(error, "winerror", getattr(error, "errno", None)))
+            reason = "filesystem_churn" if getattr(error, "errno", None) == errno.EAGAIN else "supervisor_io"
+            logger.warning("documind_index stage=%s reason=%s code=index_resource native_code=%s", stage, reason,
+                           getattr(error, "winerror", None) or getattr(error, "errno", None))
             self.close()
-            raise IndexFailure("index_resource") from None
+            raise IndexFailure("index_resource", reason=reason) from None
         except Exception:
             self.close()  # Never leave an expired/failed request running.
             raise
@@ -155,4 +190,6 @@ class IndexService:
             for i in range(1, 21):
                 output.with_suffix(f".progress-{i:02}").unlink(missing_ok=True)
             output.with_suffix(".progress-part").unlink(missing_ok=True)
+            output.with_suffix(".diagnostic").unlink(missing_ok=True)
+            output.with_suffix(".diagnostic-part").unlink(missing_ok=True)
             self.lock.release()

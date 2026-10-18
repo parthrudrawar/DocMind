@@ -31,8 +31,10 @@ def _json(path, data):
 
 def seal(folder, limits):
     files = {path.relative_to(folder).as_posix(): path for path in folder.rglob("*") if path.is_file()}
-    if set(files) != FILES or sum(p.stat().st_size for p in files.values()) > limits.snapshot_bytes:
-        raise IndexFailure("index_resource")
+    if set(files) != FILES:
+        raise IndexFailure(reason="invalid_snapshot")
+    if sum(p.stat().st_size for p in files.values()) > limits.snapshot_bytes:
+        raise IndexFailure("index_resource", reason="snapshot_capacity")
     manifest = {name: hashlib.sha256(path.read_bytes()).hexdigest() for name, path in files.items()}
     _json(folder / "manifest.json", {"version": 1, "model": MODEL, "files": manifest})
     return hashlib.sha256((folder / "manifest.json").read_bytes()).hexdigest()
@@ -67,7 +69,7 @@ def publish(folder, chunks, vectors, limits):
     folder = Path(folder)
     children = [c for c in chunks if c["indexable"]]
     if not 0 < len(children) <= limits.chunks:
-        raise IndexFailure("index_resource")
+        raise IndexFailure("index_resource", reason="chunk_capacity")
     ids = [c["chunk_id"] for c in children]
     # Exact original HNSW parameters and BM25 corpus/tokenizer/tie ordering.
     VectorStore(folder).replace_project(SHARD, [vectors], ids)
@@ -77,15 +79,16 @@ def publish(folder, chunks, vectors, limits):
     return seal(folder, limits)
 
 
-def build(documents, destination, embedder, limits):
+def build(documents, destination, embedder, limits, diagnostic=lambda _: None):
     started, cpu = time.monotonic(), time.process_time()
     faiss.omp_set_num_threads(1)
     chunks, total = [], 0
+    diagnostic("chunking")
     for document in documents:
         pages = [SimpleNamespace(**page) for page in document["pages"]]
         total += sum(len(p.text.encode("utf-8")) for p in pages)
         if total > limits.text_bytes:
-            raise IndexFailure("index_resource")
+            raise IndexFailure("index_resource", reason="text_capacity")
         produced = Chunker(embedder.count_tokens, 220, 35, 800).chunk_document(document["id"], pages)
         # Original chunk boundaries unchanged. Replace only random UUIDs, so
         # citation targets and parent links survive a deterministic reindex.
@@ -97,14 +100,16 @@ def build(documents, destination, embedder, limits):
                        parent_chunk_id=mapping.get(chunk.parent_chunk_id), filename=document["filename"])
             chunks.append(row)
         if sum(c["indexable"] for c in chunks) > limits.chunks:
-            raise IndexFailure("index_resource")
+            raise IndexFailure("index_resource", reason="chunk_capacity")
     children = [c for c in chunks if c["indexable"]]
     if not children:
         raise IndexFailure()
     # Same original embedder/model/normalization; schedule eight items rather
     # than Docker's 128 to bound ONNX activation memory. No text is dropped and
     # no batch becomes searchable independently. Parity is measured, not assumed.
+    diagnostic("embedding")
     vectors = embedder.embed_texts([c["text"] for c in children], batch_size=8)
+    diagnostic("snapshot_publication")
     checksum = publish(destination, chunks, vectors, limits)
     return {"checksum": checksum, "chunks": len(children), "metrics": {
         "wall_seconds": time.monotonic() - started, "cpu_seconds": time.process_time() - cpu,

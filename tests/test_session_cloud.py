@@ -385,7 +385,8 @@ def test_original_ui_shell_and_two_independent_views(environment, monkeypatch):
     assert not a.exception and not b.exception
     assert [tab.label for tab in a.tabs] == ui.TABS
     assert len(a.tabs) == len(b.tabs) == 7
-    assert a.chat_input[0].disabled and b.chat_input[0].disabled
+    assert not a.chat_input[0].disabled and not b.chat_input[0].disabled
+    assert store.generation is None
     assert any(button.label == "New Chat" for button in a.sidebar.button)
     assert "Only-A.pdf" in [expander.label for expander in a.sidebar.expander]
     assert "Only-A.pdf" not in [expander.label for expander in b.sidebar.expander]

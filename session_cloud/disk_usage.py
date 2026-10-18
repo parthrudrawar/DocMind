@@ -1,10 +1,25 @@
 """Conservative size accounting while a supervised worker atomically renames files."""
 import errno
 import stat
+import time
+
+
+def _scan_attempts():
+    """Allow short atomic-rename bursts, never return an unverified subtotal."""
+    deadline = time.monotonic() + 1.0
+    for attempt in range(50):
+        if attempt:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                return
+            time.sleep(min(0.02, remaining))
+            if time.monotonic() >= deadline:
+                return
+        yield
 
 
 def disk_bytes(folder):
-    for _ in range(3):
+    for _ in _scan_attempts():
         try:
             total = 0
             for path in folder.rglob("*"):
@@ -31,7 +46,7 @@ def model_cache_bytes(folder):
     if folder.is_symlink() or getattr(folder, "is_junction", lambda: False)():
         raise OSError(errno.EPERM, "Invalid public cache root")
     root = folder.resolve()
-    for _ in range(3):
+    for _ in _scan_attempts():
         try:
             total = 0
             for path in folder.rglob("*"):
