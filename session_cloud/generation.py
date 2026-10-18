@@ -27,6 +27,12 @@ class GenerationService:
         self.budget = ProviderBudget(limits, clock=store.clock)
         self.gate, self.lock, self.running = threading.Lock(), threading.Lock(), {}
 
+    def reserve(self, capability, owner, messages, maximum):
+        if self.store.daily_quota is None:
+            raise SessionError("quota_unavailable")
+        return self.budget.reserve(owner, messages, maximum,
+            charge=lambda: self.store.daily_quota.reserve(capability, owner))
+
     def cancel(self, capability, ref, chat, turn_id):
         self.store.check(capability, ref)
         with self.lock:
@@ -182,7 +188,7 @@ class GenerationService:
             active(True)
             if len(calls) >= self.limits.calls_per_turn:
                 raise SessionError("generation_budget")
-            reserved = self.budget.reserve(lease.owner, messages, maximum)
+            reserved = self.reserve(capability, lease.owner, messages, maximum)
             calls.append(purpose)
             reservations.append(reserved)
             pieces, usage, completed = [], None, False

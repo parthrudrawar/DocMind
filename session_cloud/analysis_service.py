@@ -138,7 +138,7 @@ class AnalysisService(GenerationService):
                           for key, g in state["guides"].items()}
                 prompt, maximum, temperature = collection_brief_prompt(collection_parts(docs, guides)), 300, 0.3
             messages = [{"role": "system", "content": UNTRUSTED_DOCUMENT_POLICY}, {"role": "user", "content": prompt}]
-            reserved = self.budget.reserve(lease.owner, messages, maximum)
+            reserved = self.reserve(capability, lease.owner, messages, maximum)
             active(True)
             publish({"type": "stage", "stage": "generating", "status": "active"})
             pieces, size, usage, completed = [], 0, None, False

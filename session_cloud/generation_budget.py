@@ -8,7 +8,7 @@ from session_cloud.runtime import SessionError
 
 @dataclass(frozen=True)
 class GenerationLimits:
-    user_requests: int = 20
+    user_requests: int = 25
     global_requests: int = 60
     user_tokens: int = 120_000
     global_tokens: int = 180_000
@@ -47,7 +47,7 @@ class ProviderBudget:
         self.day, self.calls, self.tokens, self.lifetime = int(clock() // 86400), 0, 0, 0
         self.users = {}
 
-    def reserve(self, owner, messages, output):
+    def reserve(self, owner, messages, output, *, charge=None):
         bound = prompt_token_bound(messages)
         if (type(output) is not int or output <= 0 or output > self.limits.answer_tokens
                 or bound > self.limits.input_bound or bound + output > self.limits.context_bound):
@@ -58,12 +58,18 @@ class ProviderBudget:
             if day != self.day:
                 self.day, self.calls, self.tokens, self.users = day, 0, 0, {}
             calls, tokens = self.users.get(owner, (0, 0))
+            if calls >= self.limits.user_requests:
+                raise SessionError("daily_ai_limit")
             if (len(self.users) >= 100 and owner not in self.users
-                    or calls >= self.limits.user_requests or self.calls >= self.limits.global_requests
+                    or self.calls >= self.limits.global_requests
                     or tokens + amount > self.limits.user_tokens
                     or self.tokens + amount > self.limits.global_tokens
                     or self.lifetime >= self.limits.lifetime_requests):
                 raise SessionError("generation_budget")
+            # Durable account reservation happens before provider I/O. A failed
+            # or uncertain reservation blocks the call, with no local fallback.
+            if charge is not None:
+                charge()
             self.calls += 1
             self.lifetime += 1
             self.tokens += amount

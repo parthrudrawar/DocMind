@@ -338,7 +338,7 @@ def test_pair_failure_is_atomic_and_uses_shared_quota(comparison_env):
     e.responses.append(Frames(json.dumps([CONTRA])))
     with pytest.raises(SessionError) as exc:
         run(e)
-    assert exc.value.code == "generation_budget" and len(e.requests) == 1
+    assert exc.value.code == "daily_ai_limit" and len(e.requests) == 1
     assert e.store.get_contradictions(A, e.refs[A]) is None
 
 
@@ -441,6 +441,7 @@ def test_native_pdf_samples_cache_invalidation_and_corruption(tmp_path, case):
 
     store = WorkspaceStore(SimpleNamespace(authorize=lambda _: SimpleNamespace(user_id="test", deadline=time.time() + 10000)),
         base_dir=tmp_path, model_cache=cache,
+        daily_quota=SimpleNamespace(reserve=lambda capability, owner: None),
         provider=GroqStream(GroqConfig("gsk_dummy_native_comparison_test"), transport=httpx.MockTransport(handler)))
     ref = store.open(A)
     documents = []

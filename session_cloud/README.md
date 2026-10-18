@@ -2,6 +2,13 @@
 
 ## Approved separate preview preparation
 
+The current candidate also requires the additive `preview_quota.sql` setup in
+the preview Supabase project for a durable 25 AI requests/account/UTC day.
+See `PREVIEW_DEPLOYMENT.md`. The setup is prepared only, not applied here.
+Missing or unavailable quota storage blocks AI calls. This replaces historical
+process-local account allowance descriptions below; document/chat storage stays
+temporary. No new Secrets or paid service is required.
+
 Use [PREVIEW_DEPLOYMENT.md](PREVIEW_DEPLOYMENT.md) for the feature-branch preview.
 The approved preview uses `session_cloud/streamlit_app.py`, the adjacent pinned
 `requirements.txt`, Python 3.12, and this branch's root Streamlit configuration

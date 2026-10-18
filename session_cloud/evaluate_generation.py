@@ -88,7 +88,8 @@ def evaluate(reference, cache, output):
     store = WorkspaceStore(SimpleNamespace(authorize=lambda _: SimpleNamespace(
         user_id="33333333-3333-4333-8333-333333333333", deadline=time.time() + 3600)),
         base_dir=output, model_cache=cache, generation_limits=test_limits,
-        provider=GroqStream(GroqConfig("gsk_dummy_offline_evaluation_only"), transport=httpx.MockTransport(request)))
+        provider=GroqStream(GroqConfig("gsk_dummy_offline_evaluation_only"), transport=httpx.MockTransport(request)),
+        daily_quota=SimpleNamespace(reserve=lambda capability, owner: None))
     ref, documents = store.open(token), []
     base_context = store.prepare_answer_context
 

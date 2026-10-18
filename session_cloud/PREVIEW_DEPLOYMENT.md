@@ -14,9 +14,52 @@
 The existing entrypoint already bootstraps repository-relative imports and the
 bundled OAuth component. There is no second/simplified RAG entrypoint to maintain.
 All seven analysis features and the original-style seven-tab UI remain intact.
-No Docker, Redis, FastAPI, Celery, Pinecone, Cloudinary, SQL migration, service-role
-key or cloud write key is required by this preview. The old application remains
+No Docker, Redis, FastAPI, Celery, Pinecone, Cloudinary, service-role key or cloud
+write key is required by this preview. The durable daily allowance requires the
+preview-only `preview_quota.sql` setup described below. The old application remains
 in the repository for rollback, but its entrypoint/dependencies are not selected.
+
+## Preview daily AI allowance (local preparation; not applied automatically)
+
+Before using this candidate, review and run `session_cloud/preview_quota.sql`
+once in the preview Supabase project's SQL Editor. It creates only
+`preview_ai_usage` and `preview_reserve_ai()`, with no changes to existing
+`cloud_*` tables, Auth configuration or production functions. Do not run the old
+`authenticated_cloud/schema.sql` for this setup. No generated values or new
+Secrets are needed. Do not apply this to a production project without approval.
+
+First run the numbered SELECT blocks in `session_cloud/preview_quota_preflight.sql`
+separately in the preview project's SQL Editor. They inspect catalog metadata and
+permissions only, and never invoke `preview_reserve_ai()` or read user records.
+Expect all prerequisite booleans true, no target relation/type collisions, no
+same-name functions in `public`, and client roles with public-schema usage but
+without superuser/RLS-bypass privileges. Stop
+on collisions or unexpected permissions; do not drop existing objects or reset
+counters. The checks cannot identify whether you selected the intended project;
+verify that in the dashboard. No migration is applied by these checks.
+
+The definer function uses `search_path = pg_catalog, pg_temp`, with temporary
+objects last and all application relations explicitly schema-qualified.
+
+Supabase Free includes PostgreSQL and database RPCs. One row per authenticated
+account stores the current UTC day and request count. The function locks that
+row, derives identity from `auth.uid()` and the day from database time, and
+permits at most 25 reservations/day. There is no browser-supplied owner/count,
+direct table access, refund, reset or delete endpoint. Rows do not grow by day.
+Refresh, logout, new workspaces and app restarts cannot reset these counts.
+
+Every outgoing Groq call reserves first, including analysis, decomposition,
+quote fallback and follow-ups. A chat action can use several requests. Provider
+401/429/timeouts and incomplete streams retain their reservation. Failed or
+uncertain quota RPCs block Groq without retrying or falling back to memory;
+an uncertain RPC can conservatively spend a reservation without a Groq call.
+Missing SQL produces the generic usage-verification unavailable message.
+The existing shared request, token, lifetime, time and concurrency caps still
+apply and may stop usage before 25. Those extra safety counters remain local.
+Groq provider rate limits have a separate provider-limit message.
+
+The SQL and tests are prepared locally; live Supabase enforcement still requires
+the setup above and preview verification. No cloud database was modified here.
 
 Community Cloud searches dependencies beside the entrypoint before the repository
 root, and runs from the repository root. Therefore do not select

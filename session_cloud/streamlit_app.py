@@ -21,6 +21,7 @@ from session_cloud.comparison_view import render_comparisons  # noqa: E402
 from session_cloud.exploration_view import render_exploration  # noqa: E402
 from session_cloud.upload_workflow import render_upload  # noqa: E402
 from session_cloud.inline_answers import reconcile_inline_scope  # noqa: E402
+from session_cloud.daily_quota import SupabaseDailyQuota  # noqa: E402
 
 TABS = ["Chat", "Documents", "Contradictions", "Knowledge Gaps",
         "Smart Questions", "Insights", "Timeline"]
@@ -28,10 +29,11 @@ TAGLINE = "Explore your documents. Ask smarter questions. Discover insights back
 
 
 @st.cache_resource(show_spinner=False)
-def get_runtime(schema_version="polished-preview-v1"):
+def get_runtime(schema_version="preview-durable-quota-v1"):
     config = AuthConfig.load(st.secrets)
     provider = GroqStream(GroqConfig.load(st.secrets)) if st.secrets.get("GROQ_API_KEY") else None
-    return WorkspaceStore(AuthBroker(AuthOnlyClient(config), config.app_url), provider=provider)
+    auth = AuthBroker(AuthOnlyClient(config), config.app_url)
+    return WorkspaceStore(auth, provider=provider, daily_quota=SupabaseDailyQuota(auth, config))
 
 
 def render_help():
@@ -43,10 +45,12 @@ def render_help():
                     "up to 200 pages, 1 MB extracted text and 1,200 retrieval chunks. "
                     "Large or scanned PDFs may fail processing. OCR is off. No partial index is published.")
         st.markdown("**Free demo allowance:** 6 upload, preparation and indexing attempts/account/day; "
-                    "20 AI calls/account/day, 60 shared, including failures and analysis. "
+                    "25 AI calls/account/UTC day, shared across chat, follow-ups and all analysis, including failed attempts. "
+                    "The account counter persists through refresh, logout and app restarts. "
+                    "60 shared calls/day and other safety caps still apply. "
                     "Token and provider limits may stop requests sooner. No automatic AI retries.")
         st.caption("Five conversations, twenty turns each; ten inline answer threads. "
-                   "Counters are process-local, not durable across restarts.")
+                   "Upload, token and shared safety counters are process-local; the daily account AI counter is stored in Supabase.")
         st.markdown("**Analysis:** tools sample indexed excerpts; source material shows input provenance, "
                     "not claim-level proof. Questions may be unanswerable; timeline dates may be inferred. "
                     "Chat references point to the actual evidence supplied. Evidence signals are not probabilities.")
@@ -202,7 +206,8 @@ def main():
     store = get_runtime()
     browser_auth = components.declare_component("documind_cloud_auth",
         path=str(ROOT / "authenticated_cloud/component"))
-    capability = login(store, browser_auth)
+    with st.container(key="documind_auth_bridge"):
+        capability = login(store, browser_auth)
     render_workspace(store, capability)
 
 

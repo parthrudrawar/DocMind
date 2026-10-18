@@ -212,7 +212,7 @@ def test_timeline_later_document_failure_is_atomic_and_budget_shared(exploration
     idle(e)
     with pytest.raises(SessionError) as exc:
         run(e, "insights", rid="over-budget")
-    assert exc.value.code == "generation_budget" and e.store.analyses.budget is e.store.generation.budget
+    assert exc.value.code == "daily_ai_limit" and e.store.analyses.budget is e.store.generation.budget
 
 
 @pytest.mark.parametrize("kind", ["questions", "insights", "timeline"])
@@ -354,6 +354,7 @@ def test_native_all_seven_analyses_reindex_delete_expiry_and_corruption(tmp_path
 
     store = WorkspaceStore(SimpleNamespace(authorize=authorize, logout=lambda t: users.pop(t, None)),
         base_dir=tmp_path, model_cache=cache, clock=lambda: now[0],
+        daily_quota=SimpleNamespace(reserve=lambda capability, owner: None),
         provider=GroqStream(GroqConfig("gsk_dummy_native_all_feature_test"), transport=httpx.MockTransport(handler)))
     ref, other = store.open(A), store.open(B)
     documents, indexing, results = [], [], {}

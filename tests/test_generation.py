@@ -82,7 +82,8 @@ def env(tmp_path, monkeypatch):
 
     remote, requests, streams = provider()
     store = WorkspaceStore(SimpleNamespace(authorize=authorize, logout=lambda t: users.pop(t, None)),
-        clock=lambda: now[0], base_dir=tmp_path, provider=remote)
+        clock=lambda: now[0], base_dir=tmp_path, provider=remote,
+        daily_quota=SimpleNamespace(reserve=lambda capability, owner: None))
     refs, docs, chats = {}, {}, {}
     for token in (A, B):
         ref = refs[token] = store.open(token)
@@ -263,7 +264,7 @@ def test_budget_atomic_concurrency_failed_reservations_and_day_lifetime():
     assert exc.value.code == "generation_budget"
 
 
-@pytest.mark.parametrize("limits,code", [(replace(GenerationLimits(), user_requests=1), "generation_budget"),
+@pytest.mark.parametrize("limits,code", [(replace(GenerationLimits(), user_requests=1), "daily_ai_limit"),
     (replace(GenerationLimits(), user_tokens=10), "generation_budget"),
     (replace(GenerationLimits(), input_bound=10), "generation_context"),
     (replace(GenerationLimits(), context_bound=10), "generation_context")])
@@ -374,7 +375,8 @@ def test_native_ingestion_to_stream_with_dummy_http_provider(tmp_path):
     import fitz
     remote, _, _ = provider()
     auth = SimpleNamespace(authorize=lambda t: SimpleNamespace(user_id="user-a", deadline=time.time() + 10000))
-    store = WorkspaceStore(auth, base_dir=tmp_path, model_cache=cache, provider=remote)
+    store = WorkspaceStore(auth, base_dir=tmp_path, model_cache=cache, provider=remote,
+        daily_quota=SimpleNamespace(reserve=lambda capability, owner: None))
     ref, chat = store.open(A), None
     try:
         with fitz.open() as pdf:

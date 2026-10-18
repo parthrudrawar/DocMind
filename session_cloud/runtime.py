@@ -25,6 +25,8 @@ from session_cloud.question_answers import QuestionAnswers
 
 class SessionError(CloudError):
     MESSAGES = {**CloudError.MESSAGES,
+        "daily_ai_limit": "Your account has used its 25 AI requests for today. The allowance resets at 00:00 UTC. Analysis, follow-ups and failed API attempts count too.",
+        "quota_unavailable": "AI usage verification is temporarily unavailable. No AI request was sent. Please try later or contact the demo owner.",
         "expired": "This temporary workspace expired. Sign in again to start an empty workspace.",
         "upload": "Use a PDF up to 100 MB, within the temporary workspace's remaining allowance.",
         "disk": "The temporary storage allowance is full. Remove a document or try later.",
@@ -103,10 +105,11 @@ class WorkspaceStore(UploadWorkflow, QuestionAnswers, IndexedWorkspace, Analysis
     """
 
     def __init__(self, auth, *, limits=Limits(), clock=time.time, monotonic=time.monotonic, base_dir=None, model_cache=None,
-                 provider=None, generation_limits=None):
+                 provider=None, generation_limits=None, daily_quota=None):
         if any(type(value) is not int or value <= 0 for value in vars(limits).values()):
             raise ValueError("Limits must be positive integers")
         self.auth, self.limits, self.clock, self.monotonic = auth, limits, clock, monotonic
+        self.daily_quota = daily_quota
         self.root = Path(tempfile.mkdtemp(prefix="documind-session-", dir=base_dir)).resolve()
         # Native FAISS archives include a random temporary suffix. Preserve the
         # full, server-owned path on Windows even in a deeply nested temp root.

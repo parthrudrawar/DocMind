@@ -545,10 +545,12 @@ div[data-testid="stHorizontalBlock"] .stButton > button:hover {
 }
 /* Preview polish: supported keyed containers and semantic test-id selectors.
    Native sidebar and conversation scrolling are retained; no DOM scripts. */
-[data-testid="stMainBlockContainer"] { max-width: 100%; padding: 1rem 2rem 1.25rem; }
+/* Emitted only after verified sign-in; keep the session handshake mounted. */
+[data-testid="stLayoutWrapper"]:has(> .st-key-documind_auth_bridge) { display:none; }
+[data-testid="stMainBlockContainer"] { max-width: 100%; padding: .25rem 2rem 1.25rem; }
 .sidebar-brand { color:#e2e8f0; font-size:1.65rem; font-weight:800; letter-spacing:-.05em; }
 .app-header { font-size:2rem; line-height:1.2; letter-spacing:-.05em; }
-.st-key-documind_app_header { background:#0e1117; padding:.5rem 0; }
+.st-key-documind_app_header { background:#0e1117; padding:.15rem 0; gap:.25rem; }
 [data-testid="stLayoutWrapper"]:has(> .st-key-documind_app_header) {
     position:sticky; top:2.8rem; z-index:15; background:#0e1117;
 }
@@ -587,7 +589,7 @@ button:focus-visible, [role="tab"]:focus-visible { outline:2px solid #a5b4fc; ou
 .analysis-result > div > div:last-child { font-size:1rem !important; line-height:1.8 !important; color:#cbd5e1 !important; }
 .analysis-result > div { font-size:1rem !important; line-height:1.7 !important; }
 @media (max-width:700px) {
-    [data-testid="stMainBlockContainer"] { padding:.5rem .75rem 1rem; }
+    [data-testid="stMainBlockContainer"] { padding:.25rem .75rem 1rem; }
     .app-header { font-size:1.65rem; }
     [data-testid="stTabs"] [role="tablist"] { top:10rem; }
     [role="tab"] { padding:.45rem .6rem; font-size:.85rem; }

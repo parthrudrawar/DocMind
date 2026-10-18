@@ -82,7 +82,7 @@ def execute_collection(service, capability, ref, kind, request_id, lease, state,
         created = datetime.fromtimestamp(store.clock(), timezone.utc).isoformat()
         for index, (messages, pair, temperature, maximum) in enumerate(jobs, 1):
             active(True)
-            reserved = service.budget.reserve(lease.owner, messages, maximum)
+            reserved = service.reserve(capability, lease.owner, messages, maximum)
             reservations.append(reserved)
             publish({"type": "stage", "stage": "generating", "status": "active", "comparison": index,
                      "comparisons": len(jobs)})

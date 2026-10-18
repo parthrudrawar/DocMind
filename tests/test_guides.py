@@ -73,7 +73,8 @@ def env(tmp_path, monkeypatch):
 
     provider = GroqStream(GroqConfig("gsk_dummy_analysis_test_only"), transport=httpx.MockTransport(handler))
     store = WorkspaceStore(SimpleNamespace(authorize=authorize, logout=lambda t: users.pop(t, None)),
-                           clock=lambda: now[0], base_dir=tmp_path, provider=provider)
+                           clock=lambda: now[0], base_dir=tmp_path, provider=provider,
+                           daily_quota=SimpleNamespace(reserve=lambda capability, owner: None))
     refs, docs = {}, {}
     for token in (A, B):
         ref = refs[token] = store.open(token)
@@ -271,7 +272,7 @@ def test_analysis_shares_chat_budget_and_does_not_refund_failures(env):
     idle(env)
     with pytest.raises(SessionError) as exc:
         run(env, request_id="new-request")
-    assert exc.value.code == "generation_budget" and len(env.requests) == 1
+    assert exc.value.code == "daily_ai_limit" and len(env.requests) == 1
 
 
 def test_analysis_busy_uses_same_gate_as_chat_and_cannot_bypass_it(env):
@@ -474,6 +475,7 @@ def test_native_guides_then_brief_reindex_and_delete_are_atomic(tmp_path):
 
     store = WorkspaceStore(SimpleNamespace(authorize=lambda _: SimpleNamespace(user_id="a", deadline=time.time() + 10000)),
         base_dir=tmp_path, model_cache=cache,
+        daily_quota=SimpleNamespace(reserve=lambda capability, owner: None),
         provider=GroqStream(GroqConfig("gsk_dummy_native_analysis_test"), transport=httpx.MockTransport(handler)))
     ref = store.open(A)
     try:
